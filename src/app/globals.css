@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 34 50% 95%;
-    --foreground: 19 68% 15%;
+    --background: 10 100% 98%; /* Soft Peach/White */
+    --foreground: 349 40% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 19 68% 15%;
+    --card-foreground: 349 40% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 19 68% 15%;
-    --primary: 38 93% 54%;
-    --primary-foreground: 34 50% 5%;
-    --secondary: 19 68% 95%;
-    --secondary-foreground: 19 68% 43%;
-    --muted: 34 20% 90%;
-    --muted-foreground: 19 30% 40%;
-    --accent: 19 68% 43%;
-    --accent-foreground: 34 50% 98%;
+    --popover-foreground: 349 40% 20%;
+    --primary: 45 100% 60%; /* Vibrant Yellow */
+    --primary-foreground: 349 40% 20%;
+    --secondary: 349 100% 96%; /* Very Soft Pink */
+    --secondary-foreground: 349 70% 50%;
+    --muted: 10 20% 94%;
+    --muted-foreground: 349 20% 45%;
+    --accent: 349 100% 72%; /* Playful Pink/Red */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 19 30% 85%;
-    --input: 19 30% 85%;
-    --ring: 38 93% 54%;
-    --radius: 0.75rem;
+    --border: 349 30% 92%;
+    --input: 349 30% 92%;
+    --ring: 45 100% 60%;
+    --radius: 1.5rem;
   }
 }
 
@@ -39,26 +39,49 @@
   }
 }
 
-.tile-shadow {
-  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.1);
+.card-snap {
+  @apply rounded-[2rem] border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;
+}
+
+.card-snap:hover {
+  @apply shadow-[0_20px_40px_rgb(0,0,0,0.08)] -translate-y-1;
+}
+
+.btn-snap {
+  @apply rounded-full font-black uppercase tracking-wider shadow-sm transition-all active:scale-95;
 }
 
 .scrabble-tile {
-  @apply relative flex items-center justify-center bg-white border-2 border-primary rounded-lg text-2xl font-bold uppercase transition-all duration-200 select-none;
-  width: 3.5rem;
-  height: 3.5rem;
-  box-shadow: 0 4px 0 0 #d97706;
+  @apply relative flex items-center justify-center bg-white border-4 border-primary rounded-2xl text-3xl font-black uppercase transition-all duration-200 select-none;
+  width: 4rem;
+  height: 4rem;
+  box-shadow: 0 6px 0 0 #facc15;
 }
 
 .scrabble-tile:active {
   @apply translate-y-1;
-  box-shadow: 0 0px 0 0 #d97706;
+  box-shadow: 0 0px 0 0 #facc15;
 }
 
 .scrabble-tile.correct {
-  @apply bg-green-100 border-green-500 text-green-700 shadow-none translate-y-1;
+  @apply bg-green-50 border-green-400 text-green-600 shadow-none translate-y-1;
 }
 
 .scrabble-tile.empty {
-  @apply bg-muted/30 border-dashed border-muted shadow-none;
+  @apply bg-muted/50 border-dashed border-muted/50 border-2 shadow-none;
+}
+
+.bg-pattern {
+  background-image: radial-gradient(circle at 2px 2px, rgba(247, 167, 28, 0.05) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }
