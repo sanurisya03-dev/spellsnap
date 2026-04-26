@@ -42,7 +42,7 @@ const DEFAULT_WORDS: WordItem[] = [
 ];
 
 export function useGameStore() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const db = useFirestore();
 
   const wordsQuery = useMemo(() => {
@@ -69,6 +69,7 @@ export function useGameStore() {
 
   const allWords = useMemo(() => {
     const custom = firebaseWords || [];
+    // Memoize the combined list to prevent re-renders in components depending on it
     return [...DEFAULT_WORDS, ...custom];
   }, [firebaseWords]);
 
@@ -134,6 +135,9 @@ export function useGameStore() {
       });
   }, [db]);
 
+  // isLoaded should be true if we're not waiting on critical user/words state
+  const isLoaded = !userLoading && !wordsLoading && (!user || !statsLoading);
+
   return {
     stats,
     allWords,
@@ -143,6 +147,6 @@ export function useGameStore() {
     addWordMastered,
     addCustomWord,
     deleteCustomWord,
-    isLoaded: !wordsLoading && (!user || !statsLoading)
+    isLoaded
   };
 }
