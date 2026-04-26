@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Star, TrendingUp, Trophy, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, Star, TrendingUp, Trophy, Calendar, BookOpen, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useGameStore } from "@/lib/game-store";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,13 @@ export default function StatsPage() {
   const router = useRouter();
   const { stats, isLoaded } = useGameStore();
 
-  if (!isLoaded) return null;
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6 md:p-12 max-w-4xl mx-auto space-y-12">

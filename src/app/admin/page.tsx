@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, Search, GraduationCap, LayoutGrid } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -27,7 +27,13 @@ export default function AdminDashboard() {
   const [newWord, setNewWord] = useState({ word: "", definition: "", exampleSentence: "", theme: "" });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  if (!isLoaded) return null;
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleAddWord = () => {
     if (!newWord.word || !newWord.definition) return;

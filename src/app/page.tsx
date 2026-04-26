@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Play, Award, Settings, BookOpen, Star, LogIn, LogOut, User } from "lucide-react";
+import { Sparkles, Play, Award, Settings, BookOpen, Star, LogIn, LogOut, User, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGameStore } from "@/lib/game-store";
@@ -33,7 +33,13 @@ export default function LobbyPage() {
     }
   };
 
-  if (!isLoaded || userLoading) return null;
+  if (!isLoaded || userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center p-6 md:p-12 space-y-8 max-w-5xl mx-auto">
