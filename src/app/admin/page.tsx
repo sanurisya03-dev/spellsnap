@@ -3,11 +3,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Image as ImageIcon, Sparkles, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useGameStore } from "@/lib/game-store";
+import { useGameStore, type Difficulty } from "@/lib/game-store";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateWordImage } from "@/ai/flows/generate-word-image";
 import Image from "next/image";
 
@@ -32,7 +33,8 @@ export default function AdminDashboard() {
     definition: "", 
     exampleSentence: "", 
     theme: "", 
-    imageUrl: "" 
+    imageUrl: "",
+    difficulty: "beginner" as Difficulty
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -50,7 +52,7 @@ export default function AdminDashboard() {
     addCustomWord({
       ...newWord
     });
-    setNewWord({ word: "", definition: "", exampleSentence: "", theme: "", imageUrl: "" });
+    setNewWord({ word: "", definition: "", exampleSentence: "", theme: "", imageUrl: "", difficulty: "beginner" });
     setIsDialogOpen(false);
   };
 
@@ -69,7 +71,8 @@ export default function AdminDashboard() {
 
   const filteredWords = allWords.filter(w => 
     w.word.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    w.theme?.toLowerCase().includes(searchTerm.toLowerCase())
+    w.theme?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    w.difficulty.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -97,7 +100,7 @@ export default function AdminDashboard() {
             <DialogHeader>
               <DialogTitle className="text-2xl font-black">Add Spelling Word</DialogTitle>
               <DialogDescription>
-                Create a new challenge with custom visuals.
+                Create a new challenge with custom difficulty and visuals.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -112,6 +115,22 @@ export default function AdminDashboard() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="difficulty" className="font-bold">Difficulty</Label>
+                  <Select 
+                    value={newWord.difficulty} 
+                    onValueChange={(val: Difficulty) => setNewWord({...newWord, difficulty: val})}
+                  >
+                    <SelectTrigger id="difficulty">
+                      <SelectValue placeholder="Select Level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Explorer</SelectItem>
+                      <SelectItem value="advanced">Wizard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="theme" className="font-bold">Theme</Label>
                   <Input 
                     id="theme" 
@@ -119,16 +138,6 @@ export default function AdminDashboard() {
                     value={newWord.theme} 
                     onChange={(e) => setNewWord({...newWord, theme: e.target.value})}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-bold">Image Preview</Label>
-                  <div className="h-10 w-full border-2 border-dashed border-muted rounded-xl flex items-center justify-center overflow-hidden">
-                    {newWord.imageUrl ? (
-                      <img src={newWord.imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                    ) : (
-                      <ImageIcon className="text-muted-foreground h-4 w-4" />
-                    )}
-                  </div>
                 </div>
               </div>
               <div className="space-y-2">
@@ -184,7 +193,7 @@ export default function AdminDashboard() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-5 w-5" />
           <Input 
-            placeholder="Search words or themes..." 
+            placeholder="Search words, themes, or difficulty..." 
             className="pl-10 h-12 rounded-2xl border-2 border-primary/20 focus:border-primary transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -201,9 +210,16 @@ export default function AdminDashboard() {
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <div className="absolute top-4 left-4">
+                <div className="absolute top-4 left-4 flex gap-2">
                   <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-black uppercase text-accent border border-accent/20">
                     {word.theme || "General"}
+                  </span>
+                  <span className={`bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
+                    word.difficulty === 'beginner' ? 'text-primary border-primary/20' : 
+                    word.difficulty === 'intermediate' ? 'text-accent border-accent/20' : 
+                    'text-secondary border-secondary/20'
+                  }`}>
+                    {word.difficulty}
                   </span>
                 </div>
               </div>

@@ -10,10 +10,15 @@
         "definition": { "type": "string" },
         "exampleSentence": { "type": "string" },
         "theme": { "type": "string" },
+        "difficulty": { 
+          "type": "string", 
+          "enum": ["beginner", "intermediate", "advanced"],
+          "description": "The manually assigned difficulty level for this word"
+        },
         "imageUrl": { "type": "string", "description": "URL of the image representing the word" },
         "userId": { "type": "string", "description": "The user who created this custom word" }
       },
-      "required": ["word", "definition"]
+      "required": ["word", "definition", "difficulty"]
     },
     "UserStats": {
       "title": "UserStats",

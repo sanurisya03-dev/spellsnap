@@ -26,16 +26,17 @@ export default function GamePage() {
   const [timer, setTimer] = useState(10);
   const [hiddenIndices, setHiddenIndices] = useState<number[]>([]);
 
-  // Initialize words to play once data is loaded
+  // Initialize words based on EXPLICIT difficulty field
   useEffect(() => {
     if (!isLoaded || allWords.length === 0 || wordsToPlay.length > 0) return;
     
-    let filtered = allWords;
-    if (difficulty === "beginner") filtered = allWords.filter(w => w.word.length <= 4);
-    else if (difficulty === "intermediate") filtered = allWords.filter(w => w.word.length >= 5 && w.word.length <= 7);
-    else if (difficulty === "advanced") filtered = allWords.filter(w => w.word.length >= 8);
+    // Filter by the difficulty level explicitly set by the teacher
+    let filtered = allWords.filter(w => w.difficulty === difficulty);
 
-    if (filtered.length === 0 && allWords.length > 0) filtered = [allWords[0]];
+    // Fallback: if no words for this specific level, just take a random selection or everything
+    if (filtered.length === 0 && allWords.length > 0) {
+      filtered = allWords;
+    }
 
     const shuffled = [...filtered].sort(() => 0.5 - Math.random()).slice(0, 5);
     setWordsToPlay(shuffled);

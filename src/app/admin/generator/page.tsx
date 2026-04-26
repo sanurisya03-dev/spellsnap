@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -9,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { generateWordList, type GenerateWordListOutput } from "@/ai/flows/ai-powered-word-list-assistant";
-import { useGameStore } from "@/lib/game-store";
+import { useGameStore, type Difficulty } from "@/lib/game-store";
 
 export default function AIGeneratorPage() {
   const router = useRouter();
@@ -20,7 +21,8 @@ export default function AIGeneratorPage() {
   const [form, setForm] = useState({
     theme: "",
     gradeLevel: "Year 1",
-    learnerNeeds: "General vocabulary building"
+    learnerNeeds: "General vocabulary building",
+    targetDifficulty: "beginner" as Difficulty
   });
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
@@ -31,7 +33,11 @@ export default function AIGeneratorPage() {
     setAddedIds(new Set());
     
     try {
-      const output = await generateWordList(form);
+      const output = await generateWordList({
+        theme: form.theme,
+        gradeLevel: form.gradeLevel,
+        learnerNeeds: form.learnerNeeds
+      });
       setResults(output);
     } catch (error) {
       console.error("AI Generation failed:", error);
@@ -42,11 +48,11 @@ export default function AIGeneratorPage() {
 
   const handleAddWord = (wordObj: any, index: number) => {
     addCustomWord({
-      id: `ai-${Date.now()}-${index}`,
       word: wordObj.word.toUpperCase(),
       definition: wordObj.definition,
       exampleSentence: wordObj.exampleSentence,
-      theme: form.theme
+      theme: form.theme,
+      difficulty: form.targetDifficulty
     });
     setAddedIds(prev => new Set(Array.from(prev).concat([index.toString()])));
   };
@@ -82,7 +88,20 @@ export default function AIGeneratorPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="font-bold">Grade Level</Label>
+                <Label className="font-bold">Assign to Difficulty</Label>
+                <Select value={form.targetDifficulty} onValueChange={(val: Difficulty) => setForm({...form, targetDifficulty: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">Beginner</SelectItem>
+                    <SelectItem value="intermediate">Explorer</SelectItem>
+                    <SelectItem value="advanced">Wizard</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold">Grade Level Reference</Label>
                 <Select value={form.gradeLevel} onValueChange={(val) => setForm({...form, gradeLevel: val})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Year" />
@@ -141,6 +160,7 @@ export default function AIGeneratorPage() {
           {results && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h3 className="text-2xl font-black text-accent">Generated Suggestions</h3>
+              <p className="text-sm text-muted-foreground">These words will be added to the <span className="font-bold text-primary">{form.targetDifficulty}</span> bank.</p>
               {results.map((word, idx) => (
                 <Card key={idx} className="rounded-3xl border-2 hover:border-accent transition-all">
                   <CardContent className="p-6 flex justify-between items-center gap-6">
