@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "Word": {
+      "title": "Word",
+      "description": "A spelling word for the game",
+      "type": "object",
+      "properties": {
+        "word": { "type": "string" },
+        "definition": { "type": "string" },
+        "exampleSentence": { "type": "string" },
+        "theme": { "type": "string" },
+        "userId": { "type": "string", "description": "The user who created this custom word" }
+      },
+      "required": ["word", "definition"]
+    },
+    "UserStats": {
+      "title": "UserStats",
+      "description": "User's progress and achievements",
+      "type": "object",
+      "properties": {
+        "stars": { "type": "number" },
+        "wordsMastered": { "type": "number" },
+        "correctLetters": { "type": "number" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "words/{wordId}": {
+      "schema": "#/entities/Word",
+      "description": "Collection of spelling words"
+    },
+    "users/{userId}/stats/main": {
+      "schema": "#/entities/UserStats",
+      "description": "User specific statistics"
+    }
+  }
+}

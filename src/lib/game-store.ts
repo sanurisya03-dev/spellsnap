@@ -1,6 +1,18 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  addDoc, 
+  deleteDoc, 
+  serverTimestamp, 
+  increment 
+} from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
@@ -11,12 +23,12 @@ export interface WordItem {
   exampleSentence: string;
   imageHint?: string;
   theme?: string;
+  userId?: string;
 }
 
 export interface UserStats {
   stars: number;
   wordsMastered: number;
-  completedLevels: number;
   correctLetters: number;
 }
 
@@ -30,76 +42,107 @@ const DEFAULT_WORDS: WordItem[] = [
 ];
 
 export function useGameStore() {
-  const [stats, setStats] = useState<UserStats>({
-    stars: 0,
-    wordsMastered: 0,
-    completedLevels: 0,
-    correctLetters: 0,
-  });
+  const { user } = useUser();
+  const db = useFirestore();
 
-  const [customWords, setCustomWords] = useState<WordItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const wordsQuery = useMemo(() => {
+    if (!db) return null;
+    return collection(db, 'words');
+  }, [db]);
 
-  useEffect(() => {
-    const savedStats = localStorage.getItem("spellsnap_stats");
-    const savedWords = localStorage.getItem("spellsnap_words");
+  const { data: firebaseWords, loading: wordsLoading } = useCollection<WordItem>(wordsQuery);
+  
+  const statsRef = useMemo(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid, 'stats', 'main');
+  }, [db, user?.uid]);
 
-    if (savedStats) setStats(JSON.parse(savedStats));
-    if (savedWords) setCustomWords(JSON.parse(savedWords));
-    setIsLoaded(true);
-  }, []);
+  const { data: firebaseStats, loading: statsLoading } = useDoc<UserStats>(statsRef);
 
-  const allWords = useMemo(() => [...DEFAULT_WORDS, ...customWords], [customWords]);
+  const stats = useMemo((): UserStats => {
+    return firebaseStats || {
+      stars: 0,
+      wordsMastered: 0,
+      correctLetters: 0,
+    };
+  }, [firebaseStats]);
+
+  const allWords = useMemo(() => {
+    const custom = firebaseWords || [];
+    return [...DEFAULT_WORDS, ...custom];
+  }, [firebaseWords]);
 
   const addStars = useCallback((amount: number) => {
-    setStats(prev => {
-      const next = { ...prev, stars: prev.stars + amount };
-      localStorage.setItem("spellsnap_stats", JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    if (!db || !user?.uid || !statsRef) return;
+    setDoc(statsRef, { stars: increment(amount) }, { merge: true })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: statsRef.path,
+          operation: 'update',
+          requestResourceData: { stars: amount }
+        }));
+      });
+  }, [db, user?.uid, statsRef]);
 
   const addCorrectLetter = useCallback(() => {
-    setStats(prev => {
-      const next = { ...prev, correctLetters: prev.correctLetters + 1 };
-      localStorage.setItem("spellsnap_stats", JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    if (!db || !user?.uid || !statsRef) return;
+    setDoc(statsRef, { correctLetters: increment(1) }, { merge: true })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: statsRef.path,
+          operation: 'update',
+          requestResourceData: { correctLetters: 1 }
+        }));
+      });
+  }, [db, user?.uid, statsRef]);
 
   const addWordMastered = useCallback(() => {
-    setStats(prev => {
-      const next = { ...prev, wordsMastered: prev.wordsMastered + 1 };
-      localStorage.setItem("spellsnap_stats", JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    if (!db || !user?.uid || !statsRef) return;
+    setDoc(statsRef, { wordsMastered: increment(1) }, { merge: true })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: statsRef.path,
+          operation: 'update',
+          requestResourceData: { wordsMastered: 1 }
+        }));
+      });
+  }, [db, user?.uid, statsRef]);
 
-  const addCustomWord = useCallback((word: WordItem) => {
-    setCustomWords(prev => {
-      const updated = [...prev, word];
-      localStorage.setItem("spellsnap_words", JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+  const addCustomWord = useCallback((word: Omit<WordItem, 'id'>) => {
+    if (!db || !user?.uid) return;
+    const colRef = collection(db, 'words');
+    const wordData = { ...word, userId: user.uid, createdAt: serverTimestamp() };
+    addDoc(colRef, wordData)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: colRef.path,
+          operation: 'create',
+          requestResourceData: wordData
+        }));
+      });
+  }, [db, user?.uid]);
 
   const deleteCustomWord = useCallback((id: string) => {
-    setCustomWords(prev => {
-      const updated = prev.filter(w => w.id !== id);
-      localStorage.setItem("spellsnap_words", JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+    if (!db) return;
+    const docRef = doc(db, 'words', id);
+    deleteDoc(docRef)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete'
+        }));
+      });
+  }, [db]);
 
   return {
     stats,
     allWords,
-    customWords,
+    customWords: firebaseWords || [],
     addStars,
     addCorrectLetter,
     addWordMastered,
     addCustomWord,
     deleteCustomWord,
-    isLoaded
+    isLoaded: !wordsLoading && (!user || !statsLoading)
   };
 }

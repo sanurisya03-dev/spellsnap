@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGameStore } from "@/lib/game-store";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 export default function StatsPage() {
   const router = useRouter();
@@ -28,7 +29,6 @@ export default function StatsPage() {
       </header>
 
       <main className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Main Stats */}
         <div className="grid grid-cols-1 gap-6">
           <Card className="rounded-[2.5rem] bg-primary/10 border-none overflow-hidden relative">
             <div className="absolute top-4 right-4 text-primary opacity-20 rotate-12">
@@ -67,7 +67,6 @@ export default function StatsPage() {
           </div>
         </div>
 
-        {/* Level Progress */}
         <div className="space-y-6">
            <h3 className="text-2xl font-black px-2">Skill Levels</h3>
            <div className="space-y-4">

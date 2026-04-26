@@ -1,19 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Play, Award, Settings, BookOpen, Star } from "lucide-react";
+import { Sparkles, Play, Award, Settings, BookOpen, Star, LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGameStore } from "@/lib/game-store";
+import { useUser, useAuth } from "@/firebase";
+import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function LobbyPage() {
   const { stats, isLoaded } = useGameStore();
+  const { user, loading: userLoading } = useUser();
+  const auth = useAuth();
 
-  if (!isLoaded) return null;
+  const handleSignIn = async () => {
+    if (!auth) return;
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Sign in failed:", error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+  };
+
+  if (!isLoaded || userLoading) return null;
 
   return (
     <div className="min-h-screen flex flex-col items-center p-6 md:p-12 space-y-8 max-w-5xl mx-auto">
-      {/* Header section */}
       <header className="w-full flex flex-col md:flex-row justify-between items-center gap-6">
         <div className="text-center md:text-left">
           <h1 className="text-5xl font-black text-accent tracking-tight flex items-center gap-2">
@@ -22,32 +45,48 @@ export default function LobbyPage() {
           <p className="text-muted-foreground font-medium mt-1">A Digital Spelling Innovation</p>
         </div>
 
-        <div className="flex items-center gap-4 bg-white p-3 rounded-2xl shadow-sm border border-primary/20">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/20 p-2 rounded-full">
-              <Star className="text-primary fill-primary h-5 w-5" />
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 bg-white p-3 rounded-2xl shadow-sm border border-primary/20">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/20 p-2 rounded-full">
+                <Star className="text-primary fill-primary h-5 w-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-muted-foreground uppercase">Stars</span>
+                <span className="text-xl font-black">{stats.stars}</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-muted-foreground uppercase">Stars</span>
-              <span className="text-xl font-black">{stats.stars}</span>
+            <div className="h-10 w-px bg-border mx-2" />
+            <div className="flex items-center gap-2">
+              <div className="bg-accent/20 p-2 rounded-full">
+                <Award className="text-accent h-5 w-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-muted-foreground uppercase">Words</span>
+                <span className="text-xl font-black">{stats.wordsMastered}</span>
+              </div>
             </div>
           </div>
-          <div className="h-10 w-px bg-border mx-2" />
-          <div className="flex items-center gap-2">
-            <div className="bg-accent/20 p-2 rounded-full">
-              <Award className="text-accent h-5 w-5" />
+
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-12 w-12 border-2 border-primary">
+                <AvatarImage src={user.photoURL || ""} />
+                <AvatarFallback className="bg-primary/10"><User className="text-primary" /></AvatarFallback>
+              </Avatar>
+              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
+                <LogOut className="h-5 w-5 text-muted-foreground" />
+              </Button>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-muted-foreground uppercase">Words</span>
-              <span className="text-xl font-black">{stats.wordsMastered}</span>
-            </div>
-          </div>
+          ) : (
+            <Button onClick={handleSignIn} className="rounded-xl font-bold gap-2">
+              <LogIn className="h-4 w-4" /> Sign In
+            </Button>
+          )}
         </div>
       </header>
 
-      {/* Hero / Game Modes */}
       <main className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-        {/* Beginner */}
         <Card className="overflow-hidden border-2 border-transparent hover:border-primary transition-all group">
           <CardContent className="p-0">
             <div className="bg-primary/10 h-32 flex items-center justify-center">
@@ -65,7 +104,6 @@ export default function LobbyPage() {
           </CardContent>
         </Card>
 
-        {/* Intermediate */}
         <Card className="overflow-hidden border-2 border-transparent hover:border-accent transition-all group">
           <CardContent className="p-0">
             <div className="bg-accent/10 h-32 flex items-center justify-center">
@@ -83,7 +121,6 @@ export default function LobbyPage() {
           </CardContent>
         </Card>
 
-        {/* Advanced */}
         <Card className="overflow-hidden border-2 border-transparent hover:border-foreground transition-all group">
           <CardContent className="p-0">
             <div className="bg-foreground/5 h-32 flex items-center justify-center">
@@ -102,7 +139,6 @@ export default function LobbyPage() {
         </Card>
       </main>
 
-      {/* Navigation Footer */}
       <footer className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 pt-8 border-t">
         <Link href="/admin">
           <Button variant="ghost" className="w-full h-16 rounded-2xl flex flex-col gap-1 hover:bg-primary/10">

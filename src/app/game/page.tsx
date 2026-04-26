@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, CheckCircle2, Star, RefreshCcw, Info } from "lucide-react";
+import { ArrowLeft, Star, RefreshCcw, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGameStore, type WordItem, type Difficulty } from "@/lib/game-store";
 import { Progress } from "@/components/ui/progress";
@@ -20,9 +20,8 @@ export default function GamePage() {
   const [wordsToPlay, setWordsToPlay] = useState<WordItem[]>([]);
   const [isWrong, setIsWrong] = useState(false);
 
-  // Initialize game session once per difficulty/load
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || allWords.length === 0 || wordsToPlay.length > 0) return;
     
     let filtered = allWords;
     if (difficulty === "beginner") filtered = allWords.filter(w => w.word.length <= 4);
@@ -34,7 +33,7 @@ export default function GamePage() {
     const shuffled = [...filtered].sort(() => Math.random() - 0.5).slice(0, 5);
     setWordsToPlay(shuffled);
     setCurrentWordIndex(0);
-  }, [allWords, difficulty, isLoaded]);
+  }, [allWords, difficulty, isLoaded, wordsToPlay.length]);
 
   const currentWord = useMemo(() => wordsToPlay[currentWordIndex], [wordsToPlay, currentWordIndex]);
 
@@ -60,7 +59,7 @@ export default function GamePage() {
       });
     } else if (e.key === "Backspace") {
       setUserInput(prev => {
-        const lastFilled = prev.lastIndexOf("");
+        const lastFilled = prev.indexOf("");
         const indexToDelete = lastFilled === -1 ? prev.length - 1 : lastFilled - 1;
         if (indexToDelete >= 0) {
           const next = [...prev];
@@ -106,11 +105,19 @@ export default function GamePage() {
     }
   };
 
-  if (!isLoaded || wordsToPlay.length === 0) return null;
+  if (!isLoaded || (wordsToPlay.length === 0 && gameState !== "finished")) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="font-bold text-muted-foreground">Preparing your Spelling Adventure...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col p-6 max-w-4xl mx-auto">
-      {/* HUD */}
       <div className="flex justify-between items-center mb-12">
         <Button variant="ghost" onClick={() => router.push("/")} className="gap-2 font-bold text-accent">
           <ArrowLeft className="h-5 w-5" /> Exit Game
@@ -131,9 +138,7 @@ export default function GamePage() {
         {gameState === "intro" && currentWord && (
           <div className="text-center space-y-8 animate-in fade-in zoom-in duration-500">
             <div className="relative w-64 h-64 mx-auto bg-white rounded-3xl shadow-xl border-4 border-primary flex items-center justify-center p-4">
-               <div className="text-9xl font-black text-primary/10 absolute inset-0 flex items-center justify-center select-none">
-                  ?
-               </div>
+               <div className="text-9xl font-black text-primary/10 absolute inset-0 flex items-center justify-center select-none">?</div>
                <div className="relative z-10 text-center">
                   <span className="text-6xl mb-4 block">📦</span>
                   <p className="text-3xl font-black text-accent">{currentWord.word}</p>
@@ -162,7 +167,6 @@ export default function GamePage() {
                 </div>
               </div>
 
-              {/* Scrabble Tiles Grid */}
               <div className="flex flex-wrap justify-center gap-4">
                 {userInput.map((char, i) => (
                   <div key={i} className={cn("scrabble-tile", char === "" && "empty", isWrong && "border-destructive text-destructive")}>
@@ -179,7 +183,7 @@ export default function GamePage() {
         )}
 
         {gameState === "success" && currentWord && (
-          <div className="text-center space-y-8 animate-in bounce-in duration-500">
+          <div className="text-center space-y-8 animate-in duration-500">
             <div className="text-8xl animate-bounce-subtle">🌟</div>
             <div className="space-y-2">
               <h2 className="text-5xl font-black text-primary">Awesome!</h2>
