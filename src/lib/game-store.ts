@@ -162,7 +162,7 @@ export function useGameStore() {
     deleteDoc(wordRef);
   }, [db]);
 
-  // Faster loading: only block on essential Auth initialization
+  // Optimistic loading: block UI only on Auth status, not full data sync
   const isLoaded = !userLoading;
 
   return {

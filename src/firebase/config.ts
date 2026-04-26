@@ -8,7 +8,7 @@
  * Project Settings > General > Your apps > Web apps
  */
 export const firebaseConfig = {
-  apiKey: "AIzaSyC-d4f5g6h7j8k9l0m1n2o3p4q5r6s7t8u9",
+  apiKey: "AIzaSyB3vG7h8J9k0L1m2N3o4P5q6R7s8T9u0V1",
   authDomain: "spellsnap-demo.firebaseapp.com",
   projectId: "spellsnap-demo",
   storageBucket: "spellsnap-demo.appspot.com",
