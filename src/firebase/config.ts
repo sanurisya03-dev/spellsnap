@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Firebase configuration object.
+ * Firebase configuration object for the SpellSnap! project.
  */
 export const firebaseConfig = {
   apiKey: "AIzaSyBzRjrWyw0VHxsF3ayqr0zbMS0rYkuhr8Y",
