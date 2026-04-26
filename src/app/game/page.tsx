@@ -25,7 +25,6 @@ export default function GamePage() {
   const [timer, setTimer] = useState(10);
   const [hiddenIndices, setHiddenIndices] = useState<number[]>([]);
 
-  // Select words based on difficulty and availability
   useEffect(() => {
     if (!isLoaded || playableWords.length === 0 || wordsToPlay.length > 0) return;
     
