@@ -34,12 +34,12 @@ export interface UserStats {
 }
 
 const DEFAULT_WORDS: WordItem[] = [
-  { id: "1", word: "CAT", definition: "A small furry animal with whiskers.", exampleSentence: "The cat is sleeping on the mat.", theme: "Animals", imageUrl: "https://picsum.photos/seed/cat/600/400" },
-  { id: "2", word: "APPLE", definition: "A round fruit with red or green skin.", exampleSentence: "I ate a crunchy red apple.", theme: "Food", imageUrl: "https://picsum.photos/seed/apple/600/400" },
-  { id: "3", word: "PENCIL", definition: "A tool used for writing or drawing.", exampleSentence: "Use your pencil to draw a circle.", theme: "School", imageUrl: "https://picsum.photos/seed/pencil/600/400" },
-  { id: "4", word: "SPACE", definition: "The area beyond the Earth's atmosphere.", exampleSentence: "Astronauts travel into space.", theme: "Science", imageUrl: "https://picsum.photos/seed/space/600/400" },
-  { id: "5", word: "BOOK", definition: "A set of printed pages held together.", exampleSentence: "I love reading a story book before bed.", theme: "School", imageUrl: "https://picsum.photos/seed/book/600/400" },
-  { id: "6", word: "FRIEND", definition: "A person you know well and like.", exampleSentence: "She is my best friend at school.", theme: "General", imageUrl: "https://picsum.photos/seed/friend/600/400" },
+  { id: "1", word: "CAT", definition: "A small furry animal with whiskers.", exampleSentence: "The cat is sleeping on the mat.", theme: "Animals", imageUrl: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=600&h=400" },
+  { id: "2", word: "APPLE", definition: "A round fruit with red or green skin.", exampleSentence: "I ate a crunchy red apple.", theme: "Food", imageUrl: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&q=80&w=600&h=400" },
+  { id: "3", word: "PENCIL", definition: "A tool used for writing or drawing.", exampleSentence: "Use your pencil to draw a circle.", theme: "School", imageUrl: "https://images.unsplash.com/photo-1510811677134-45371518f99e?auto=format&fit=crop&q=80&w=600&h=400" },
+  { id: "4", word: "SPACE", definition: "The area beyond the Earth's atmosphere.", exampleSentence: "Astronauts travel into space.", theme: "Science", imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=600&h=400" },
+  { id: "5", word: "BOOK", definition: "A set of printed pages held together.", exampleSentence: "I love reading a story book before bed.", theme: "School", imageUrl: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=600&h=400" },
+  { id: "6", word: "FRIEND", definition: "A person you know well and like.", exampleSentence: "She is my best friend at school.", theme: "General", imageUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b30c?auto=format&fit=crop&q=80&w=600&h=400" },
 ];
 
 export function useGameStore() {
@@ -70,7 +70,6 @@ export function useGameStore() {
 
   const allWords = useMemo(() => {
     const custom = firebaseWords || [];
-    // Memoize to avoid unnecessary re-renders in effects
     return [...DEFAULT_WORDS, ...custom];
   }, [firebaseWords]);
 

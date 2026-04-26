@@ -37,7 +37,6 @@ export default function GamePage() {
 
     if (filtered.length === 0 && allWords.length > 0) filtered = [allWords[0]];
 
-    // Stable shuffle for initial selection
     const shuffled = [...filtered].sort(() => 0.5 - Math.random()).slice(0, 5);
     setWordsToPlay(shuffled);
     setCurrentWordIndex(0);
@@ -45,7 +44,6 @@ export default function GamePage() {
 
   const currentWord = useMemo(() => wordsToPlay[currentWordIndex], [wordsToPlay, currentWordIndex]);
 
-  // Memorization Timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (gameState === "memorizing" && timer > 0) {
@@ -64,24 +62,20 @@ export default function GamePage() {
   const startSpellingChallenge = () => {
     if (!currentWord) return;
     
-    // Determine which letters to hide based on difficulty level
     const indices = Array.from({ length: currentWord.word.length }, (_, i) => i);
     let toHide: number[] = [];
     
     if (difficulty === "advanced") {
-      toHide = indices; // All letters hidden
+      toHide = indices;
     } else if (difficulty === "intermediate") {
       const count = Math.ceil(currentWord.word.length / 2);
       toHide = [...indices].sort(() => 0.5 - Math.random()).slice(0, count);
     } else {
-      // Beginner: 1-2 random letters hidden
       const count = Math.min(currentWord.word.length - 1, currentWord.word.length > 4 ? 2 : 1);
       toHide = [...indices].sort(() => 0.5 - Math.random()).slice(0, count);
     }
     
     setHiddenIndices(toHide);
-    
-    // Pre-fill visible letters in uppercase
     const initialInput = currentWord.word.split('').map((char, i) => 
       toHide.includes(i) ? "" : char.toUpperCase()
     );
@@ -96,7 +90,6 @@ export default function GamePage() {
     const char = e.key.toUpperCase();
     if (/^[A-Z]$/.test(char)) {
       setUserInput(prev => {
-        // Find the first empty slot that is meant to be hidden
         const nextEmptyHidden = prev.findIndex((c, i) => c === "" && hiddenIndices.includes(i));
         if (nextEmptyHidden !== -1) {
           const next = [...prev];
@@ -107,7 +100,6 @@ export default function GamePage() {
       });
     } else if (e.key === "Backspace") {
       setUserInput(prev => {
-        // Find the last filled hidden slot to delete
         const lastFilledHiddenIdx = [...prev].reduce((acc, char, idx) => {
           if (char !== "" && hiddenIndices.includes(idx)) return idx;
           return acc;
@@ -128,7 +120,6 @@ export default function GamePage() {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleKeyPress]);
 
-  // Check result once all letters are entered
   useEffect(() => {
     if (gameState === "playing" && currentWord && !userInput.includes("")) {
       const typed = userInput.join("");
@@ -141,7 +132,6 @@ export default function GamePage() {
         setIsWrong(true);
         setTimeout(() => {
           setIsWrong(false);
-          // Only clear the slots that are hidden
           setUserInput(prev => prev.map((char, i) => hiddenIndices.includes(i) ? "" : char));
         }, 800);
       }
@@ -150,8 +140,7 @@ export default function GamePage() {
 
   const nextWord = () => {
     if (currentWordIndex + 1 < wordsToPlay.length) {
-      const nextIdx = currentWordIndex + 1;
-      setCurrentWordIndex(nextIdx);
+      setCurrentWordIndex(prev => prev + 1);
       setTimer(10);
       setGameState("intro");
     } else {
@@ -168,7 +157,7 @@ export default function GamePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative flex flex-col p-8">
+    <div className="min-h-screen bg-background relative flex flex-col p-8 overflow-x-hidden">
       <div className="bg-animate">
         <Cloud className="floating-element text-accent/20" size={150} style={{ top: '15%', left: '10%' }} />
         <Cloud className="floating-element text-accent/20" size={120} style={{ bottom: '20%', right: '15%' }} />
@@ -194,13 +183,13 @@ export default function GamePage() {
         {gameState === "intro" && currentWord && (
           <div className="w-full max-w-4xl text-center space-y-10 animate-in fade-in zoom-in duration-500">
             <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[4rem] shadow-3xl border-8 border-white flex flex-col md:flex-row items-center gap-10">
-              <div className="w-full md:w-1/2 aspect-video relative rounded-[3rem] overflow-hidden shadow-2xl border-4 border-primary/10">
+              <div className="w-full md:w-1/2 aspect-square relative rounded-[3rem] overflow-hidden shadow-2xl border-4 border-primary/10 bg-muted">
                 <Image 
-                  src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.word.toLowerCase()}/600/400`} 
+                  src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.id}/600/600`} 
                   alt={currentWord.word}
                   fill
                   className="object-cover"
-                  data-ai-hint="educational word"
+                  unoptimized={currentWord.imageUrl?.startsWith('data:')}
                 />
               </div>
               <div className="w-full md:w-1/2 space-y-6 text-left">
@@ -222,7 +211,7 @@ export default function GamePage() {
             </div>
             
             <div className="space-y-4">
-               <h3 className="text-3xl font-black text-foreground">Look carefully! Are you ready?</h3>
+               <h3 className="text-3xl font-black text-foreground">Look carefully! Ready to memorize?</h3>
                <Button onClick={handleStartMemorizing} className="btn-bouncy px-20 py-10 text-4xl h-auto bg-primary text-white shadow-2xl">
                  GO!
                </Button>
@@ -236,16 +225,13 @@ export default function GamePage() {
               <div className="bg-white p-20 rounded-[5rem] shadow-3xl border-12 border-primary/20">
                  <p className="text-[12rem] font-black text-primary tracking-tighter uppercase sparkle-text">{currentWord.word}</p>
               </div>
-              <div className="absolute -top-12 -right-12 bg-accent p-8 rounded-full shadow-2xl border-8 border-white animate-bounce-subtle">
-                <div className="flex flex-col items-center">
-                  <Timer className="h-10 w-10 text-white mb-1" />
+              <div className="absolute -top-12 -right-12 bg-accent h-24 w-24 rounded-full shadow-2xl border-8 border-white flex items-center justify-center animate-bounce-subtle">
                   <span className="text-4xl font-black text-white">{timer}</span>
-                </div>
               </div>
             </div>
             <div className="bg-white/50 backdrop-blur-md px-12 py-6 rounded-full border-4 border-white shadow-xl">
-               <h2 className="text-4xl font-black text-foreground">MEMORIZE IT NOW!</h2>
-               <p className="text-xl font-bold text-muted-foreground mt-2">I will hide some letters in {timer} seconds...</p>
+               <h2 className="text-4xl font-black text-foreground uppercase">Memorize Now!</h2>
+               <p className="text-xl font-bold text-muted-foreground mt-2">Hiding letters in {timer} seconds...</p>
             </div>
           </div>
         )}
@@ -253,13 +239,10 @@ export default function GamePage() {
         {gameState === "playing" && currentWord && (
           <div className="w-full max-w-4xl space-y-12 text-center">
             <div className="bg-white/70 backdrop-blur-2xl p-16 rounded-[4rem] border-8 border-white shadow-3xl space-y-12 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8">
-                 <div className="bg-primary/20 p-4 rounded-3xl">
-                    <SparklesIcon className="text-primary h-10 w-10" />
-                 </div>
-              </div>
-              
-              <div className="flex items-center justify-center gap-6">
+              <div className="flex flex-col items-center gap-6">
+                <div className="h-32 w-32 relative rounded-3xl overflow-hidden border-4 border-white shadow-xl mb-4">
+                   <img src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.id}/200/200`} alt="hint" className="object-cover h-full w-full" />
+                </div>
                 <p className="text-3xl font-bold italic text-muted-foreground">"{currentWord.definition}"</p>
               </div>
 
@@ -287,7 +270,7 @@ export default function GamePage() {
             <div className="text-[12rem] animate-bounce">🌟</div>
             <div className="space-y-4">
               <h2 className="text-8xl font-black text-primary drop-shadow-lg">AWESOME!</h2>
-              <p className="text-3xl font-bold text-muted-foreground">You snapped <span className="text-secondary font-black underline decoration-primary">{currentWord.word}</span> perfectly!</p>
+              <p className="text-3xl font-bold text-muted-foreground">You snapped <span className="text-secondary font-black underline decoration-primary uppercase">{currentWord.word}</span> perfectly!</p>
             </div>
             <Button onClick={nextWord} className="btn-bouncy px-20 py-10 text-3xl h-auto bg-secondary text-white shadow-2xl">
               {currentWordIndex + 1 === wordsToPlay.length ? "Finish Game!" : "Next Word"}
