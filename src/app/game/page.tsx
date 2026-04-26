@@ -3,7 +3,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ArrowLeft, Star, RefreshCcw, Info, Loader2, Award, Cloud, Sparkles as SparklesIcon, Timer, Zap } from "lucide-react";
+import { ArrowLeft, Star, RefreshCcw, Info, Loader2, Cloud, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGameStore, type WordItem, type Difficulty } from "@/lib/game-store";
 import { Progress } from "@/components/ui/progress";

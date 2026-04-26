@@ -123,7 +123,7 @@ export function useGameStore() {
     // Mirror progress to the classroom if active
     if (classProgressRef && (updates.stars || updates.wordsMastered)) {
       const classUpdates = {
-        stars: updates.stars ? increment(typeof updates.stars === 'number' ? updates.stars : 1) : increment(0),
+        stars: updates.stars ? increment(1) : increment(0),
         wordsMastered: updates.wordsMastered ? increment(1) : increment(0),
         pupilName: user?.displayName || "Pupil"
       };
@@ -190,11 +190,38 @@ export function useGameStore() {
       });
   }, [statsRef]);
 
+  const addCustomWord = useCallback((wordData: Omit<WordItem, 'id' | 'userId'>) => {
+    if (!db || !user?.uid) return;
+    const wordRef = collection(db, 'words');
+    const data = { ...wordData, userId: user.uid };
+    addDoc(wordRef, data)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: wordRef.path,
+          operation: 'create',
+          requestResourceData: data
+        } satisfies SecurityRuleContext));
+      });
+  }, [db, user?.uid]);
+
+  const deleteCustomWord = useCallback((wordId: string) => {
+    if (!db) return;
+    const wordRef = doc(db, 'words', wordId);
+    deleteDoc(wordRef)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: wordRef.path,
+          operation: 'delete'
+        } satisfies SecurityRuleContext));
+      });
+  }, [db]);
+
   const isLoaded = !userLoading && !wordsLoading && (!user || !statsLoading);
 
   return {
     stats,
     allWords,
+    customWords: firebaseWords || [],
     playableWords,
     activeClass,
     joinClass,
@@ -202,6 +229,8 @@ export function useGameStore() {
     addStars,
     addCorrectLetter,
     addWordMastered,
+    addCustomWord,
+    deleteCustomWord,
     isLoaded
   };
 }

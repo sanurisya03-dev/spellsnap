@@ -1,6 +1,8 @@
+
 'use client';
 
 // Updated Firebase configuration with a valid production-ready structure
+// Important: Ensure these values are updated with your actual project settings from the Firebase Console
 export const firebaseConfig = {
   apiKey: "AIzaSyAs-demo-key-for-studio",
   authDomain: "spellsnap-demo.firebaseapp.com",
