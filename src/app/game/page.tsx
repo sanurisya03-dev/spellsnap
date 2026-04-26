@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -26,21 +25,16 @@ export default function GamePage() {
   const [timer, setTimer] = useState(10);
   const [hiddenIndices, setHiddenIndices] = useState<number[]>([]);
 
-  // Initialize words
   useEffect(() => {
     if (!isLoaded || playableWords.length === 0 || wordsToPlay.length > 0) return;
     
-    // Filter by the difficulty level
     let filtered = playableWords.filter(w => w.difficulty === difficulty);
-
-    // Fallback: if no words for this specific level, use all playable words
     if (filtered.length === 0 && playableWords.length > 0) {
       filtered = playableWords;
     }
 
     const shuffled = [...filtered].sort(() => 0.5 - Math.random()).slice(0, 5);
     setWordsToPlay(shuffled);
-    setCurrentWordIndex(0);
   }, [playableWords, difficulty, isLoaded, wordsToPlay.length]);
 
   const currentWord = useMemo(() => wordsToPlay[currentWordIndex], [wordsToPlay, currentWordIndex]);

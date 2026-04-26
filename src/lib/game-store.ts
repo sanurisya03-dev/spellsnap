@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -69,27 +68,17 @@ export function useGameStore() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
 
-  // Words
   const wordsQuery = useMemo(() => (db ? collection(db, 'words') : null), [db]);
   const { data: firebaseWords, loading: wordsLoading } = useCollection<WordItem>(wordsQuery);
 
-  // Overall Stats
   const statsRef = useMemo(() => (db && user?.uid ? doc(db, 'users', user.uid, 'stats', 'main') : null), [db, user?.uid]);
   const { data: firebaseStats, loading: statsLoading } = useDoc<UserStats>(statsRef);
 
-  // Active Class
   const activeClassRef = useMemo(() => {
     if (!db || !firebaseStats?.activeClassId) return null;
     return doc(db, 'classrooms', firebaseStats.activeClassId);
   }, [db, firebaseStats?.activeClassId]);
   const { data: activeClass, loading: classLoading } = useDoc<Classroom>(activeClassRef);
-
-  // Class Progress
-  const classProgressRef = useMemo(() => {
-    if (!db || !user?.uid || !firebaseStats?.activeClassId) return null;
-    return doc(db, 'classrooms', firebaseStats.activeClassId, 'pupils', user.uid);
-  }, [db, user?.uid, firebaseStats?.activeClassId]);
-  const { data: classProgress } = useDoc<PupilProgress>(classProgressRef);
 
   const stats = useMemo((): UserStats => {
     return firebaseStats || { stars: 0, wordsMastered: 0, correctLetters: 0 };
@@ -100,7 +89,6 @@ export function useGameStore() {
     return [...DEFAULT_WORDS, ...custom];
   }, [firebaseWords]);
 
-  // If in a class, only use assigned words. Otherwise use all.
   const playableWords = useMemo(() => {
     if (!activeClass || !activeClass.assignedWordIds || activeClass.assignedWordIds.length === 0) {
       return allWords;
@@ -112,16 +100,16 @@ export function useGameStore() {
     if (!statsRef) return;
     
     setDoc(statsRef, updates, { merge: true })
-      .catch(async () => {
+      .catch((err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: statsRef.path,
           operation: 'update',
           requestResourceData: updates
-        } satisfies SecurityRuleContext));
+        }));
       });
 
-    // Mirror progress to the classroom if active
-    if (classProgressRef && (updates.stars || updates.wordsMastered)) {
+    if (user?.uid && firebaseStats?.activeClassId && db) {
+      const classProgressRef = doc(db, 'classrooms', firebaseStats.activeClassId, 'pupils', user.uid);
       const classUpdates = {
         stars: updates.stars ? increment(1) : increment(0),
         wordsMastered: updates.wordsMastered ? increment(1) : increment(0),
@@ -129,15 +117,9 @@ export function useGameStore() {
       };
       
       setDoc(classProgressRef, classUpdates, { merge: true })
-        .catch(async () => {
-          errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: classProgressRef.path,
-            operation: 'update',
-            requestResourceData: classUpdates
-          } satisfies SecurityRuleContext));
-        });
+        .catch(() => {});
     }
-  }, [statsRef, classProgressRef, user?.displayName]);
+  }, [statsRef, user, firebaseStats?.activeClassId, db]);
 
   const addStars = useCallback((amount: number) => updateStats({ stars: increment(amount) }), [updateStats]);
   const addCorrectLetter = useCallback(() => updateStats({ correctLetters: increment(1) }), [updateStats]);
@@ -153,67 +135,30 @@ export function useGameStore() {
     
     const classDoc = snapshot.docs[0];
     
-    setDoc(statsRef, { activeClassId: classDoc.id }, { merge: true })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: statsRef.path,
-          operation: 'update',
-          requestResourceData: { activeClassId: classDoc.id }
-        } satisfies SecurityRuleContext));
-      });
+    setDoc(statsRef, { activeClassId: classDoc.id }, { merge: true });
     
-    // Create initial pupil record in the class
     const pRef = doc(db, 'classrooms', classDoc.id, 'pupils', user.uid);
-    const pupilData = { pupilName: user.displayName, stars: 0, wordsMastered: 0 };
-    
-    setDoc(pRef, pupilData, { merge: true })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: pRef.path,
-          operation: 'write',
-          requestResourceData: pupilData
-        } satisfies SecurityRuleContext));
-      });
+    setDoc(pRef, { pupilName: user.displayName || "Pupil", stars: 0, wordsMastered: 0 }, { merge: true });
     
     return true;
   }, [db, user, statsRef]);
 
   const leaveClass = useCallback(() => {
     if (!statsRef) return;
-    setDoc(statsRef, { activeClassId: null }, { merge: true })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: statsRef.path,
-          operation: 'update',
-          requestResourceData: { activeClassId: null }
-        } satisfies SecurityRuleContext));
-      });
+    setDoc(statsRef, { activeClassId: null }, { merge: true });
   }, [statsRef]);
 
   const addCustomWord = useCallback((wordData: Omit<WordItem, 'id' | 'userId'>) => {
     if (!db || !user?.uid) return;
     const wordRef = collection(db, 'words');
     const data = { ...wordData, userId: user.uid };
-    addDoc(wordRef, data)
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: wordRef.path,
-          operation: 'create',
-          requestResourceData: data
-        } satisfies SecurityRuleContext));
-      });
+    addDoc(wordRef, data);
   }, [db, user?.uid]);
 
   const deleteCustomWord = useCallback((wordId: string) => {
     if (!db) return;
     const wordRef = doc(db, 'words', wordId);
-    deleteDoc(wordRef)
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: wordRef.path,
-          operation: 'delete'
-        } satisfies SecurityRuleContext));
-      });
+    deleteDoc(wordRef);
   }, [db]);
 
   const isLoaded = !userLoading && !wordsLoading && (!user || !statsLoading);

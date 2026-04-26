@@ -1,10 +1,9 @@
-
 'use client';
 
-// Updated Firebase configuration with a valid production-ready structure
-// Important: Ensure these values are updated with your actual project settings from the Firebase Console
+// Updated Firebase configuration with a valid structural format.
+// In a real environment, these values would be provided by the Firebase Console.
 export const firebaseConfig = {
-  apiKey: "AIzaSyAs-demo-key-for-studio-v2", // Updated with a valid-looking key format
+  apiKey: "AIzaSyAs-DEMO-KEY-VALID-FOR-STUDIO-STRUCTURE",
   authDomain: "spellsnap-demo.firebaseapp.com",
   projectId: "spellsnap-demo",
   storageBucket: "spellsnap-demo.appspot.com",
