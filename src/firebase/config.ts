@@ -1,9 +1,15 @@
 'use client';
 
-// Structurally valid Firebase configuration.
-// Replace these with your actual values from the Firebase Console (Settings > General).
+/**
+ * Firebase configuration object.
+ * 
+ * IMPORTANT: The apiKey provided here is a structurally valid placeholder for development.
+ * To use production Firebase services (Authentication, Firestore), you must replace these
+ * values with the actual configuration from your Firebase Console:
+ * Project Settings > General > Your apps > Web apps
+ */
 export const firebaseConfig = {
-  apiKey: "AIzaSyAs-VALID-API-KEY-FOR-STUDIO-STRUCTURE",
+  apiKey: "AIzaSyAs-DUMMY-API-KEY-FOR-DEVELOPMENT-ONLY",
   authDomain: "spellsnap-demo.firebaseapp.com",
   projectId: "spellsnap-demo",
   storageBucket: "spellsnap-demo.appspot.com",
