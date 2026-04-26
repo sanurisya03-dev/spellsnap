@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -52,6 +51,7 @@ export default function TeacherDashboard() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleSignIn = async () => {
     if (!auth) return;
@@ -63,7 +63,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  // Fetch Teacher's Classes
   const classQuery = useMemo(() => {
     if (!db || !user?.uid) return null;
     return query(collection(db, 'classrooms'), where('teacherId', '==', user.uid));
@@ -75,7 +74,6 @@ export default function TeacherDashboard() {
     [myClasses, selectedClassId]
   );
 
-  // Fetch Pupil Progress for Selected Class
   const pupilQuery = useMemo(() => {
     if (!db || !selectedClassId) return null;
     return collection(db, 'classrooms', selectedClassId, 'pupils');
@@ -83,11 +81,21 @@ export default function TeacherDashboard() {
   const { data: pupils } = useCollection<PupilProgress>(pupilQuery);
 
   const handleCreateClass = () => {
-    if (!db || !user?.uid || !newClassName) return;
+    if (!db || !user?.uid) return;
     
+    if (!newClassName.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Class Name Required",
+        description: "Please enter a name for your classroom."
+      });
+      return;
+    }
+
+    setIsCreating(true);
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const data = {
-      name: newClassName,
+      name: newClassName.trim(),
       code,
       teacherId: user.uid,
       assignedWordIds: [],
@@ -97,6 +105,11 @@ export default function TeacherDashboard() {
     const classroomRef = collection(db, 'classrooms');
     
     addDoc(classroomRef, data)
+      .then(() => {
+        toast({ title: "Class Created!", description: `The join code is ${code}` });
+        setNewClassName("");
+        setIsCreateOpen(false);
+      })
       .catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
           path: classroomRef.path,
@@ -104,11 +117,10 @@ export default function TeacherDashboard() {
           requestResourceData: data,
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsCreating(false);
       });
-
-    setNewClassName("");
-    setIsCreateOpen(false);
-    toast({ title: "Class Created!", description: `The join code is ${code}` });
   };
 
   const toggleWordAssignment = (wordId: string) => {
@@ -199,12 +211,17 @@ export default function TeacherDashboard() {
                   value={newClassName} 
                   onChange={(e) => setNewClassName(e.target.value)} 
                   className="rounded-xl border-2 h-12"
+                  disabled={isCreating}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleCreateClass} className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-black text-lg">
-                Create Class
+              <Button 
+                onClick={handleCreateClass} 
+                className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-black text-lg"
+                disabled={isCreating}
+              >
+                {isCreating ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : "Create Class"}
               </Button>
             </DialogFooter>
           </DialogContent>
