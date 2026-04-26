@@ -22,12 +22,40 @@
     },
     "UserStats": {
       "title": "UserStats",
-      "description": "User's progress and achievements",
+      "description": "User's overall progress and achievements",
       "type": "object",
       "properties": {
         "stars": { "type": "number" },
         "wordsMastered": { "type": "number" },
-        "correctLetters": { "type": "number" }
+        "correctLetters": { "type": "number" },
+        "activeClassId": { "type": "string", "description": "The ID of the class the pupil is currently in" }
+      }
+    },
+    "Classroom": {
+      "title": "Classroom",
+      "description": "A virtual classroom created by a teacher",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "code": { "type": "string", "description": "Unique join code" },
+        "teacherId": { "type": "string" },
+        "assignedWordIds": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "IDs of words assigned to this class"
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "code", "teacherId"]
+    },
+    "PupilProgress": {
+      "title": "PupilProgress",
+      "description": "Specific progress for a pupil within a class",
+      "type": "object",
+      "properties": {
+        "stars": { "type": "number" },
+        "wordsMastered": { "type": "number" },
+        "pupilName": { "type": "string" }
       }
     }
   },
@@ -41,7 +69,15 @@
     },
     "users/{userId}/stats/main": {
       "schema": "#/entities/UserStats",
-      "description": "User specific statistics"
+      "description": "User specific overall statistics"
+    },
+    "classrooms/{classId}": {
+      "schema": "#/entities/Classroom",
+      "description": "Collection of classrooms"
+    },
+    "classrooms/{classId}/pupils/{userId}": {
+      "schema": "#/entities/PupilProgress",
+      "description": "Progress of a specific pupil in a classroom"
     }
   }
 }

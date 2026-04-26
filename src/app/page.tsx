@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Play, Award, Settings, BookOpen, Star, LogIn, LogOut, User, Loader2, Rocket, Camera, Lightbulb, Cloud, Sun } from "lucide-react";
+import { Sparkles, Play, Award, Settings, BookOpen, Star, LogIn, LogOut, User, Loader2, Rocket, Camera, Lightbulb, Cloud, Sun, DoorOpen, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGameStore } from "@/lib/game-store";
@@ -10,7 +11,7 @@ import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function LobbyPage() {
-  const { stats, isLoaded } = useGameStore();
+  const { stats, isLoaded, activeClass, leaveClass } = useGameStore();
   const { user, loading: userLoading } = useUser();
   const auth = useAuth();
 
@@ -63,7 +64,10 @@ export default function LobbyPage() {
 
         {user ? (
           <div className="flex items-center gap-4 bg-white/90 backdrop-blur-xl p-3 pl-6 rounded-full border-4 border-white shadow-xl">
-            <span className="font-black hidden md:block text-primary">{user.displayName}</span>
+            <div className="flex flex-col text-right">
+              <span className="font-black hidden md:block text-primary leading-none">{user.displayName}</span>
+              {activeClass && <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{activeClass.name}</span>}
+            </div>
             <Avatar className="h-12 w-12 border-4 border-primary">
               <AvatarImage src={user.photoURL || ""} />
               <AvatarFallback><User /></AvatarFallback>
@@ -82,11 +86,26 @@ export default function LobbyPage() {
       <main className="w-full max-w-5xl p-8 space-y-12 z-10 flex-1">
         <section className="bg-white/60 backdrop-blur-2xl p-12 rounded-[4rem] border-8 border-white shadow-3xl flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1 space-y-6 text-center md:text-left">
-            <h2 className="text-6xl font-black leading-tight text-foreground">
-              Ready to <span className="sparkle-text">Snap Words?</span>
-            </h2>
+            <div className="space-y-2">
+              <h2 className="text-6xl font-black leading-tight text-foreground">
+                Ready to <span className="sparkle-text">Snap Words?</span>
+              </h2>
+              {activeClass && (
+                <div className="flex items-center gap-3 justify-center md:justify-start">
+                   <div className="bg-accent/10 px-4 py-2 rounded-full border-2 border-accent/20 flex items-center gap-2">
+                      <Users className="h-5 w-5 text-accent" />
+                      <span className="font-black text-accent uppercase tracking-tighter">Class: {activeClass.name}</span>
+                   </div>
+                   <Button variant="ghost" size="sm" onClick={leaveClass} className="text-xs font-bold text-muted-foreground hover:text-destructive">
+                     Leave Class
+                   </Button>
+                </div>
+              )}
+            </div>
             <p className="text-2xl font-bold text-muted-foreground leading-relaxed">
-              Play games, earn stars, and become the classroom champion!
+              {activeClass 
+                ? "Your teacher has assigned special words for you to learn!" 
+                : "Play games, earn stars, and become the classroom champion!"}
             </p>
             <div className="flex flex-wrap justify-center md:justify-start gap-6 pt-4">
               <div className="bg-white px-8 py-4 rounded-3xl shadow-lg flex items-center gap-3 border-4 border-primary/20">
@@ -134,14 +153,20 @@ export default function LobbyPage() {
           ))}
         </section>
 
-        <footer className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8">
+        <footer className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-8">
+           <Link href="/join">
+              <Button variant="outline" className="w-full h-28 rounded-[3rem] border-8 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-xl group">
+                 <DoorOpen className="h-10 w-10 text-accent group-hover:scale-125 transition-transform" />
+                 <span className="text-sm font-black uppercase tracking-widest text-accent">Join Class</span>
+              </Button>
+           </Link>
            <Link href="/stats">
               <Button variant="outline" className="w-full h-28 rounded-[3rem] border-8 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-xl group">
                  <Award className="h-10 w-10 text-secondary group-hover:scale-125 transition-transform" />
                  <span className="text-sm font-black uppercase tracking-widest text-secondary">My Progress</span>
               </Button>
            </Link>
-           <Link href="/admin">
+           <Link href="/teacher">
               <Button variant="outline" className="w-full h-28 rounded-[3rem] border-8 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-xl group">
                  <Settings className="h-10 w-10 text-primary group-hover:scale-125 transition-transform" />
                  <span className="text-sm font-black uppercase tracking-widest text-primary">Teachers</span>

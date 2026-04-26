@@ -16,7 +16,7 @@ export default function GamePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const difficulty = (searchParams.get("difficulty") || "beginner") as Difficulty;
-  const { allWords, addStars, addCorrectLetter, addWordMastered, isLoaded } = useGameStore();
+  const { playableWords, addStars, addCorrectLetter, addWordMastered, isLoaded, activeClass } = useGameStore();
 
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [userInput, setUserInput] = useState<string[]>([]);
@@ -26,22 +26,22 @@ export default function GamePage() {
   const [timer, setTimer] = useState(10);
   const [hiddenIndices, setHiddenIndices] = useState<number[]>([]);
 
-  // Initialize words based on EXPLICIT difficulty field
+  // Initialize words
   useEffect(() => {
-    if (!isLoaded || allWords.length === 0 || wordsToPlay.length > 0) return;
+    if (!isLoaded || playableWords.length === 0 || wordsToPlay.length > 0) return;
     
-    // Filter by the difficulty level explicitly set by the teacher
-    let filtered = allWords.filter(w => w.difficulty === difficulty);
+    // Filter by the difficulty level
+    let filtered = playableWords.filter(w => w.difficulty === difficulty);
 
-    // Fallback: if no words for this specific level, just take a random selection or everything
-    if (filtered.length === 0 && allWords.length > 0) {
-      filtered = allWords;
+    // Fallback: if no words for this specific level, use all playable words
+    if (filtered.length === 0 && playableWords.length > 0) {
+      filtered = playableWords;
     }
 
     const shuffled = [...filtered].sort(() => 0.5 - Math.random()).slice(0, 5);
     setWordsToPlay(shuffled);
     setCurrentWordIndex(0);
-  }, [allWords, difficulty, isLoaded, wordsToPlay.length]);
+  }, [playableWords, difficulty, isLoaded, wordsToPlay.length]);
 
   const currentWord = useMemo(() => wordsToPlay[currentWordIndex], [wordsToPlay, currentWordIndex]);
 
@@ -170,7 +170,7 @@ export default function GamePage() {
         </Button>
         <div className="flex-1 max-w-[400px] mx-12">
           <div className="flex justify-between text-xs font-black uppercase text-muted-foreground mb-3 tracking-widest">
-            <span>Progress</span>
+            <span>{activeClass ? `Class: ${activeClass.name}` : "General Practice"}</span>
             <span>{currentWordIndex + 1} of {wordsToPlay.length}</span>
           </div>
           <Progress value={((currentWordIndex + 1) / wordsToPlay.length) * 100} className="h-6 bg-white border-4 border-primary/20 rounded-full" />
@@ -186,7 +186,7 @@ export default function GamePage() {
             <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[4rem] shadow-3xl border-8 border-white flex flex-col md:flex-row items-center gap-10">
               <div className="w-full md:w-1/2 aspect-square relative rounded-[3rem] overflow-hidden shadow-2xl border-4 border-primary/10 bg-muted">
                 <Image 
-                  src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.id}/600/600`} 
+                  src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.word.toLowerCase()}/600/600`} 
                   alt={currentWord.word}
                   fill
                   className="object-cover"
@@ -242,7 +242,7 @@ export default function GamePage() {
             <div className="bg-white/70 backdrop-blur-2xl p-16 rounded-[4rem] border-8 border-white shadow-3xl space-y-12 relative overflow-hidden">
               <div className="flex flex-col items-center gap-6">
                 <div className="h-32 w-32 relative rounded-3xl overflow-hidden border-4 border-white shadow-xl mb-4">
-                   <img src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.id}/200/200`} alt="hint" className="object-cover h-full w-full" />
+                   <img src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.word.toLowerCase()}/200/200`} alt="hint" className="object-cover h-full w-full" />
                 </div>
                 <p className="text-3xl font-bold italic text-muted-foreground">"{currentWord.definition}"</p>
               </div>

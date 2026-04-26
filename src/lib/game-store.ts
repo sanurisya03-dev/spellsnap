@@ -9,7 +9,11 @@ import {
   addDoc, 
   deleteDoc, 
   serverTimestamp, 
-  increment 
+  increment,
+  query,
+  where,
+  getDocs,
+  limit
 } from 'firebase/firestore';
 import { useFirestore, useUser, useCollection, useDoc } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -32,6 +36,22 @@ export interface UserStats {
   stars: number;
   wordsMastered: number;
   correctLetters: number;
+  activeClassId?: string;
+}
+
+export interface Classroom {
+  id: string;
+  name: string;
+  code: string;
+  teacherId: string;
+  assignedWordIds: string[];
+}
+
+export interface PupilProgress {
+  id: string;
+  stars: number;
+  wordsMastered: number;
+  pupilName: string;
 }
 
 const DEFAULT_WORDS: WordItem[] = [
@@ -49,26 +69,30 @@ export function useGameStore() {
   const { user, loading: userLoading } = useUser();
   const db = useFirestore();
 
-  const wordsQuery = useMemo(() => {
-    if (!db) return null;
-    return collection(db, 'words');
-  }, [db]);
-
+  // Words
+  const wordsQuery = useMemo(() => (db ? collection(db, 'words') : null), [db]);
   const { data: firebaseWords, loading: wordsLoading } = useCollection<WordItem>(wordsQuery);
-  
-  const statsRef = useMemo(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid, 'stats', 'main');
-  }, [db, user?.uid]);
 
+  // Overall Stats
+  const statsRef = useMemo(() => (db && user?.uid ? doc(db, 'users', user.uid, 'stats', 'main') : null), [db, user?.uid]);
   const { data: firebaseStats, loading: statsLoading } = useDoc<UserStats>(statsRef);
 
+  // Active Class
+  const activeClassRef = useMemo(() => {
+    if (!db || !firebaseStats?.activeClassId) return null;
+    return doc(db, 'classrooms', firebaseStats.activeClassId);
+  }, [db, firebaseStats?.activeClassId]);
+  const { data: activeClass, loading: classLoading } = useDoc<Classroom>(activeClassRef);
+
+  // Class Progress
+  const classProgressRef = useMemo(() => {
+    if (!db || !user?.uid || !firebaseStats?.activeClassId) return null;
+    return doc(db, 'classrooms', firebaseStats.activeClassId, 'pupils', user.uid);
+  }, [db, user?.uid, firebaseStats?.activeClassId]);
+  const { data: classProgress } = useDoc<PupilProgress>(classProgressRef);
+
   const stats = useMemo((): UserStats => {
-    return firebaseStats || {
-      stars: 0,
-      wordsMastered: 0,
-      correctLetters: 0,
-    };
+    return firebaseStats || { stars: 0, wordsMastered: 0, correctLetters: 0 };
   }, [firebaseStats]);
 
   const allWords = useMemo(() => {
@@ -76,79 +100,73 @@ export function useGameStore() {
     return [...DEFAULT_WORDS, ...custom];
   }, [firebaseWords]);
 
-  const addStars = useCallback((amount: number) => {
-    if (!db || !user?.uid || !statsRef) return;
-    setDoc(statsRef, { stars: increment(amount) }, { merge: true })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: statsRef.path,
-          operation: 'update',
-          requestResourceData: { stars: amount }
-        }));
-      });
-  }, [db, user?.uid, statsRef]);
+  // If in a class, only use assigned words. Otherwise use all.
+  const playableWords = useMemo(() => {
+    if (!activeClass || !activeClass.assignedWordIds || activeClass.assignedWordIds.length === 0) {
+      return allWords;
+    }
+    return allWords.filter(w => activeClass.assignedWordIds.includes(w.id));
+  }, [allWords, activeClass]);
 
-  const addCorrectLetter = useCallback(() => {
-    if (!db || !user?.uid || !statsRef) return;
-    setDoc(statsRef, { correctLetters: increment(1) }, { merge: true })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: statsRef.path,
-          operation: 'update',
-          requestResourceData: { correctLetters: 1 }
-        }));
-      });
-  }, [db, user?.uid, statsRef]);
+  const updateStats = useCallback((updates: Partial<UserStats>) => {
+    if (!statsRef) return;
+    setDoc(statsRef, updates, { merge: true }).catch(async () => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: statsRef.path,
+        operation: 'update',
+        requestResourceData: updates
+      }));
+    });
 
-  const addWordMastered = useCallback(() => {
-    if (!db || !user?.uid || !statsRef) return;
-    setDoc(statsRef, { wordsMastered: increment(1) }, { merge: true })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: statsRef.path,
-          operation: 'update',
-          requestResourceData: { wordsMastered: 1 }
-        }));
-      });
-  }, [db, user?.uid, statsRef]);
+    // Mirror progress to the classroom if active
+    if (classProgressRef && (updates.stars || updates.wordsMastered)) {
+      setDoc(classProgressRef, {
+        stars: increment(updates.stars ? (typeof updates.stars === 'number' ? updates.stars : 1) : 0),
+        wordsMastered: increment(updates.wordsMastered ? 1 : 0),
+        pupilName: user?.displayName || "Pupil"
+      }, { merge: true });
+    }
+  }, [statsRef, classProgressRef, user?.displayName]);
 
-  const addCustomWord = useCallback((word: Omit<WordItem, 'id'>) => {
-    if (!db || !user?.uid) return;
-    const colRef = collection(db, 'words');
-    const wordData = { ...word, userId: user.uid, createdAt: serverTimestamp() };
-    addDoc(colRef, wordData)
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: wordData
-        }));
-      });
-  }, [db, user?.uid]);
+  const addStars = useCallback((amount: number) => updateStats({ stars: increment(amount) }), [updateStats]);
+  const addCorrectLetter = useCallback(() => updateStats({ correctLetters: increment(1) }), [updateStats]);
+  const addWordMastered = useCallback(() => updateStats({ wordsMastered: increment(1) }), [updateStats]);
 
-  const deleteCustomWord = useCallback((id: string) => {
-    if (!db) return;
-    const docRef = doc(db, 'words', id);
-    deleteDoc(docRef)
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete'
-        }));
-      });
-  }, [db]);
+  const joinClass = useCallback(async (code: string) => {
+    if (!db || !user?.uid || !statsRef) return false;
+    
+    const q = query(collection(db, 'classrooms'), where('code', '==', code.toUpperCase()), limit(1));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) return false;
+    
+    const classDoc = snapshot.docs[0];
+    await setDoc(statsRef, { activeClassId: classDoc.id }, { merge: true });
+    
+    // Create initial pupil record in the class
+    const pRef = doc(db, 'classrooms', classDoc.id, 'pupils', user.uid);
+    await setDoc(pRef, { pupilName: user.displayName, stars: 0, wordsMastered: 0 }, { merge: true });
+    
+    return true;
+  }, [db, user, statsRef]);
+
+  const leaveClass = useCallback(() => {
+    if (!statsRef) return;
+    setDoc(statsRef, { activeClassId: null }, { merge: true });
+  }, [statsRef]);
 
   const isLoaded = !userLoading && !wordsLoading && (!user || !statsLoading);
 
   return {
     stats,
     allWords,
-    customWords: firebaseWords || [],
+    playableWords,
+    activeClass,
+    joinClass,
+    leaveClass,
     addStars,
     addCorrectLetter,
     addWordMastered,
-    addCustomWord,
-    deleteCustomWord,
     isLoaded
   };
 }
