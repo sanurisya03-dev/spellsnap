@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Image as ImageIcon, Sparkles, BrainCircuit, Volume2 } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Volume2, Sparkles, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,9 +23,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { generateWordImage } from "@/ai/flows/generate-word-image";
 import { getPronunciation } from "@/ai/flows/pronunciation-flow";
 import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { toast } = useToast();
   const { allWords, customWords, addCustomWord, deleteCustomWord, isLoaded } = useGameStore();
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,11 +56,10 @@ export default function AdminDashboard() {
 
   const handleAddWord = () => {
     if (!newWord.word || !newWord.definition) return;
-    addCustomWord({
-      ...newWord
-    });
+    addCustomWord(newWord);
     setNewWord({ word: "", definition: "", exampleSentence: "", theme: "", imageUrl: "", phonemes: "", audioUrl: "", difficulty: "beginner" });
     setIsDialogOpen(false);
+    toast({ title: "Word Added", description: `${newWord.word} is now in the bank!` });
   };
 
   const handleAIGenerateImage = async () => {
@@ -67,7 +69,7 @@ export default function AdminDashboard() {
       const { imageUrl } = await generateWordImage({ word: newWord.word, theme: newWord.theme });
       setNewWord(prev => ({ ...prev, imageUrl }));
     } catch (error) {
-      console.error("Failed to generate image:", error);
+      console.error(error);
     } finally {
       setIsGeneratingImage(false);
     }
@@ -80,7 +82,7 @@ export default function AdminDashboard() {
       const { phonemes, audioUrl } = await getPronunciation({ word: newWord.word });
       setNewWord(prev => ({ ...prev, phonemes, audioUrl }));
     } catch (error) {
-      console.error("Failed to generate pronunciation:", error);
+      console.error(error);
     } finally {
       setIsGeneratingPronunciation(false);
     }
@@ -92,55 +94,49 @@ export default function AdminDashboard() {
     w.difficulty.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleDelete = (id: string, word: string) => {
+    if (confirm(`Are you sure you want to delete "${word}" from the bank?`)) {
+      deleteCustomWord(id);
+      toast({ title: "Word Deleted", variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-8 md:p-12 max-w-6xl mx-auto space-y-6 md:space-y-8">
-      <header className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
-        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-          <Button variant="outline" size="icon" onClick={() => router.push("/")} className="rounded-xl shrink-0">
-            <ArrowLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-background p-4 sm:p-12 max-w-6xl mx-auto space-y-8">
+      <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.push("/teacher")} className="rounded-xl shrink-0">
+            <ArrowLeft />
           </Button>
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-black flex items-center gap-2 truncate">
-              <GraduationCap className="text-accent h-5 w-5 sm:h-8 sm:w-8" /> Word Management
+          <div>
+            <h1 className="text-3xl font-black flex items-center gap-2">
+              <GraduationCap className="text-accent h-8 w-8" /> Word Bank
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">Customise spelling lists and visuals</p>
+            <p className="text-sm text-muted-foreground font-medium">Manage all spelling words and visuals</p>
           </div>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 sm:px-6 h-10 sm:h-12">
-              <Plus className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Add New Word
+            <Button className="rounded-xl bg-primary hover:bg-primary/90 font-bold px-8 h-14 shadow-lg">
+              <Plus className="mr-2 h-5 w-5" /> Add New Word
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-2xl sm:rounded-3xl w-[95vw] sm:max-w-[500px]">
+          <DialogContent className="rounded-[3rem] p-10 max-w-2xl overflow-y-auto max-h-[90vh]">
             <DialogHeader>
-              <DialogTitle className="text-xl sm:text-2xl font-black">Add Spelling Word</DialogTitle>
-              <DialogDescription className="text-xs sm:text-base">
-                Create a new challenge with custom difficulty and visuals.
-              </DialogDescription>
+              <DialogTitle className="text-3xl font-black">New Word</DialogTitle>
+              <DialogDescription>Create a custom challenge with AI-generated visuals and sound.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-3 sm:gap-4 py-2 sm:py-4 max-h-[60vh] overflow-y-auto pr-1">
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="word" className="font-bold text-xs sm:text-sm">Spelling Word</Label>
-                <Input 
-                  id="word" 
-                  placeholder="e.g., ELEPHANT" 
-                  value={newWord.word} 
-                  onChange={(e) => setNewWord({...newWord, word: e.target.value.toUpperCase()})}
-                  className="h-10 sm:h-12"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="difficulty" className="font-bold text-xs sm:text-sm">Difficulty</Label>
-                  <Select 
-                    value={newWord.difficulty} 
-                    onValueChange={(val: Difficulty) => setNewWord({...newWord, difficulty: val})}
-                  >
-                    <SelectTrigger id="difficulty" className="h-10 sm:h-12">
-                      <SelectValue placeholder="Select Level" />
-                    </SelectTrigger>
+            <div className="grid gap-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-bold">Spelling Word</Label>
+                  <Input placeholder="E.g., COMPUTER" value={newWord.word} onChange={e => setNewWord({...newWord, word: e.target.value.toUpperCase()})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold">Difficulty</Label>
+                  <Select value={newWord.difficulty} onValueChange={(v: Difficulty) => setNewWord({...newWord, difficulty: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="beginner">Beginner</SelectItem>
                       <SelectItem value="intermediate">Explorer</SelectItem>
@@ -148,153 +144,108 @@ export default function AdminDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="theme" className="font-bold text-xs sm:text-sm">Theme</Label>
-                  <Input 
-                    id="theme" 
-                    placeholder="Animals" 
-                    value={newWord.theme} 
-                    onChange={(e) => setNewWord({...newWord, theme: e.target.value})}
-                    className="h-10 sm:h-12"
-                  />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label className="font-bold">Image URL</Label>
+                    <Button variant="ghost" size="sm" onClick={handleAIGenerateImage} disabled={isGeneratingImage || !newWord.word} className="text-accent font-black h-8">
+                      {isGeneratingImage ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />} AI Art
+                    </Button>
+                  </div>
+                  <Input placeholder="https://..." value={newWord.imageUrl} onChange={e => setNewWord({...newWord, imageUrl: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center">
+                    <Label className="font-bold">Sound & IPA</Label>
+                    <Button variant="ghost" size="sm" onClick={handleAIGeneratePronunciation} disabled={isGeneratingPronunciation || !newWord.word} className="text-secondary font-black h-8">
+                      {isGeneratingPronunciation ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Volume2 className="h-4 w-4 mr-1" />} AI Speak
+                    </Button>
+                  </div>
+                  <Input placeholder="/ipa-phonetics/" value={newWord.phonemes} onChange={e => setNewWord({...newWord, phonemes: e.target.value})} />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="imageUrl" className="font-bold text-xs sm:text-sm">Image</Label>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleAIGenerateImage} 
-                      disabled={!newWord.word || isGeneratingImage}
-                      className="h-7 text-[10px] font-black text-accent hover:bg-accent/10"
-                    >
-                      {isGeneratingImage ? <Loader2 className="animate-spin h-3 w-3 mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                      AI Image
-                    </Button>
-                  </div>
-                  <Input id="imageUrl" placeholder="URL" value={newWord.imageUrl} onChange={(e) => setNewWord({...newWord, imageUrl: e.target.value})} className="h-10 sm:h-12" />
-                </div>
-                <div className="space-y-1.5 sm:space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="phonemes" className="font-bold text-xs sm:text-sm">Phonemes</Label>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleAIGeneratePronunciation} 
-                      disabled={!newWord.word || isGeneratingPronunciation}
-                      className="h-7 text-[10px] font-black text-secondary hover:bg-secondary/10"
-                    >
-                      {isGeneratingPronunciation ? <Loader2 className="animate-spin h-3 w-3 mr-1" /> : <Volume2 className="h-3 w-3 mr-1" />}
-                      AI Sound
-                    </Button>
-                  </div>
-                  <Input id="phonemes" placeholder="/IPA/" value={newWord.phonemes} onChange={(e) => setNewWord({...newWord, phonemes: e.target.value})} className="h-10 sm:h-12" />
-                </div>
+              <div className="space-y-2">
+                <Label className="font-bold">Definition</Label>
+                <Textarea placeholder="Explain to a child..." value={newWord.definition} onChange={e => setNewWord({...newWord, definition: e.target.value})} />
               </div>
-
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="definition" className="font-bold text-xs sm:text-sm">Simple Definition</Label>
-                <Textarea 
-                  id="definition" 
-                  placeholder="A simple explanation for kids..." 
-                  value={newWord.definition}
-                  onChange={(e) => setNewWord({...newWord, definition: e.target.value})}
-                  className="min-h-[60px]"
-                />
-              </div>
-              <div className="space-y-1.5 sm:space-y-2">
-                <Label htmlFor="example" className="font-bold text-xs sm:text-sm">Example Sentence</Label>
-                <Textarea 
-                  id="example" 
-                  placeholder="Use the word in a sentence..." 
-                  value={newWord.exampleSentence}
-                  onChange={(e) => setNewWord({...newWord, exampleSentence: e.target.value})}
-                  className="min-h-[60px]"
-                />
+              <div className="space-y-2">
+                <Label className="font-bold">Example Sentence</Label>
+                <Textarea placeholder="The computer is..." value={newWord.exampleSentence} onChange={e => setNewWord({...newWord, exampleSentence: e.target.value})} />
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddWord} className="w-full bg-accent hover:bg-accent/90 rounded-xl font-bold h-10 sm:h-12">
-                Save Word
+              <Button onClick={handleAddWord} className="w-full btn-bouncy bg-primary text-white h-16 rounded-2xl text-xl font-black shadow-xl">
+                SAVE TO BANK!
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </header>
 
-      <main className="space-y-4 sm:space-y-6">
+      <main className="space-y-8">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Search words, themes, or difficulty..." 
-            className="pl-9 sm:pl-10 h-10 sm:h-12 rounded-xl sm:rounded-2xl border-2 border-primary/20 focus:border-primary transition-all text-sm sm:text-base"
+            className="pl-12 h-16 rounded-3xl border-4 border-white shadow-xl text-lg font-bold"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {filteredWords.map((word) => (
-            <Card key={word.id} className="rounded-2xl sm:rounded-3xl border-2 hover:border-primary transition-all group overflow-hidden flex flex-col">
-              <div className="aspect-video relative w-full overflow-hidden bg-muted">
-                <Image 
-                  src={word.imageUrl || `https://picsum.photos/seed/${word.id}/600/400`} 
-                  alt={word.word}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute top-3 left-3 flex gap-1.5">
-                  <span className="bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase text-accent border border-accent/20">
-                    {word.theme || "General"}
-                  </span>
-                  <span className={`bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase border ${
-                    word.difficulty === 'beginner' ? 'text-primary border-primary/20' : 
-                    word.difficulty === 'intermediate' ? 'text-accent border-accent/20' : 
-                    'text-secondary border-secondary/20'
-                  }`}>
-                    {word.difficulty}
-                  </span>
-                </div>
-              </div>
-              <CardHeader className="pb-1 sm:pb-2 p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-xl sm:text-2xl font-black text-primary uppercase truncate pr-2">{word.word}</CardTitle>
-                    {word.phonemes && <p className="text-[10px] font-black text-accent/80 tracking-widest">{word.phonemes}</p>}
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    {word.audioUrl && <Volume2 className="h-4 w-4 text-accent" />}
-                    {customWords.some(w => w.id === word.id) && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => deleteCustomWord(word.id)}
-                        className="text-destructive hover:bg-destructive/10 h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredWords.map((word) => {
+            const isCustom = customWords.some(w => w.id === word.id);
+            return (
+              <Card key={word.id} className="rounded-[3rem] border-8 border-white shadow-2xl overflow-hidden flex flex-col group transition-all hover:-translate-y-2">
+                <div className="aspect-video relative bg-muted">
+                  <Image 
+                    src={word.imageUrl || `https://picsum.photos/seed/${word.id}/600/400`} 
+                    alt={word.word}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    <Badge className="bg-white/90 text-primary font-black uppercase text-[10px]">{word.difficulty}</Badge>
+                    {isCustom ? (
+                      <Badge className="bg-accent text-white font-black uppercase text-[10px]">Custom</Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-white/90 text-muted-foreground font-black uppercase text-[10px]">System</Badge>
                     )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0 p-4 space-y-2 sm:space-y-3 flex-1">
-                <div>
-                  <h4 className="text-[8px] sm:text-[10px] font-black text-muted-foreground uppercase mb-0.5">Meaning</h4>
-                  <p className="text-xs sm:text-sm italic line-clamp-2">"{word.definition}"</p>
-                </div>
-                <div>
-                  <h4 className="text-[8px] sm:text-[10px] font-black text-muted-foreground uppercase mb-0.5">Example</h4>
-                  <p className="text-xs sm:text-sm font-medium leading-tight line-clamp-2">{word.exampleSentence}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardHeader className="p-6 pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-3xl font-black text-primary uppercase">{word.word}</CardTitle>
+                    <div className="flex gap-2">
+                      {word.audioUrl && <Volume2 className="h-5 w-5 text-accent" />}
+                      {isCustom && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(word.id, word.word)}
+                          className="text-destructive hover:bg-destructive/10 h-8 w-8"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {word.phonemes && <p className="text-xs font-black text-accent/70 tracking-widest">{word.phonemes}</p>}
+                </CardHeader>
+                <CardContent className="p-6 pt-2 space-y-4 flex-1">
+                  <p className="text-sm italic text-muted-foreground">"{word.definition}"</p>
+                  <p className="text-xs font-medium bg-muted/30 p-3 rounded-xl border border-dashed">{word.exampleSentence}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
           {filteredWords.length === 0 && (
-            <div className="col-span-full py-12 text-center text-muted-foreground">
-               <p className="text-lg font-bold">No words found match your search.</p>
+            <div className="col-span-full py-20 text-center bg-white/40 rounded-[4rem] border-4 border-dashed border-white">
+               <p className="text-2xl font-black text-muted-foreground">No words match your search!</p>
             </div>
           )}
         </div>

@@ -17,14 +17,17 @@ import {
   Copy,
   LayoutDashboard,
   LogIn,
-  ExternalLink
+  ExternalLink,
+  Filter,
+  CheckCircle,
+  Circle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useGameStore, Classroom, PupilProgress } from "@/lib/game-store";
+import { useGameStore, Classroom, PupilProgress, Difficulty } from "@/lib/game-store";
 import { useUser, useFirestore, useCollection, useAuth } from "@/firebase";
-import { collection, doc, setDoc, query, where, addDoc } from "firebase/firestore";
+import { collection, doc, setDoc, query, where } from "firebase/firestore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -41,6 +44,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 export default function TeacherDashboard() {
   const router = useRouter();
@@ -54,29 +58,18 @@ export default function TeacherDashboard() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newClassName, setNewClassName] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [assignmentSearch, setAssignmentSearch] = useState("");
+  const [assignmentFilter, setAssignmentFilter] = useState<Difficulty | "all">("all");
 
   const handleSignIn = async () => {
-    if (!auth) {
-      toast({
-        variant: "destructive",
-        title: "Connection Error",
-        description: "Firebase is still initializing. Please wait a moment."
-      });
-      return;
-    }
-    
+    if (!auth) return;
     setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      toast({ title: "Welcome back!", description: "Signed in successfully." });
+      toast({ title: "Welcome!", description: "Signed in as teacher." });
     } catch (error: any) {
-      console.error("Sign in failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Sign in failed",
-        description: error.message || "Could not complete sign in."
-      });
+      console.error(error);
     } finally {
       setIsLoggingIn(false);
     }
@@ -99,24 +92,16 @@ export default function TeacherDashboard() {
   }, [db, selectedClassId]);
   const { data: pupils } = useCollection<PupilProgress>(pupilQuery);
 
+  const filteredAssignments = useMemo(() => {
+    return allWords.filter(w => {
+      const matchesSearch = w.word.toLowerCase().includes(assignmentSearch.toLowerCase());
+      const matchesFilter = assignmentFilter === "all" || w.difficulty === assignmentFilter;
+      return matchesSearch && matchesFilter;
+    });
+  }, [allWords, assignmentSearch, assignmentFilter]);
+
   const handleCreateClass = () => {
-    if (!db || !user?.uid) {
-      toast({
-        variant: "destructive",
-        title: "Action required",
-        description: "Please sign in to create a class."
-      });
-      return;
-    }
-    
-    if (!newClassName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Class Name Required",
-        description: "Please enter a name for your classroom."
-      });
-      return;
-    }
+    if (!db || !user?.uid || !newClassName.trim()) return;
 
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const data = {
@@ -130,20 +115,17 @@ export default function TeacherDashboard() {
     const classroomRef = collection(db, 'classrooms');
     const newDocRef = doc(classroomRef);
 
-    // Optimistic UI update: Close dialog immediately to prevent "infinite loading" feel
     setIsCreateOpen(false);
     setNewClassName("");
-    toast({ title: "Class Created!", description: `The join code is ${code}` });
+    toast({ title: "Class Created!", description: `Code: ${code}` });
 
-    setDoc(newDocRef, data)
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: newDocRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-      });
+    setDoc(newDocRef, data).catch(async (err) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: newDocRef.path,
+        operation: 'create',
+        requestResourceData: data,
+      }));
+    });
   };
 
   const toggleWordAssignment = (wordId: string) => {
@@ -155,198 +137,171 @@ export default function TeacherDashboard() {
       : [...current, wordId];
     
     const docRef = doc(db, 'classrooms', selectedClass.id);
-    
-    setDoc(docRef, { assignedWordIds: next }, { merge: true })
-      .catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: { assignedWordIds: next },
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-      });
+    setDoc(docRef, { assignedWordIds: next }, { merge: true });
+  };
+
+  const handleAssignAll = () => {
+    if (!db || !selectedClass) return;
+    const allIds = filteredAssignments.map(w => w.id);
+    const current = selectedClass.assignedWordIds || [];
+    const next = Array.from(new Set([...current, ...allIds]));
+    setDoc(doc(db, 'classrooms', selectedClass.id), { assignedWordIds: next }, { merge: true });
+    toast({ title: "Words Assigned", description: `Added ${allIds.length} words to class.` });
+  };
+
+  const handleRemoveAll = () => {
+    if (!db || !selectedClass) return;
+    const allIdsToRemove = filteredAssignments.map(w => w.id);
+    const next = (selectedClass.assignedWordIds || []).filter(id => !allIdsToRemove.includes(id));
+    setDoc(doc(db, 'classrooms', selectedClass.id), { assignedWordIds: next }, { merge: true });
+    toast({ title: "Words Removed", description: "Cleared selected words from class." });
   };
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast({ title: "Code Copied!", description: "Share this with your pupils." });
+    toast({ title: "Code Copied!" });
   };
 
   if (!isLoaded || classesLoading || userLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-8 text-center space-y-8">
-        <div className="bg-white/80 backdrop-blur-2xl p-6 sm:p-16 rounded-[2rem] sm:rounded-[4rem] border-4 sm:border-8 border-white shadow-3xl max-w-2xl w-full">
-          <div className="bg-primary/10 w-16 h-16 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mx-auto mb-6 sm:mb-8 border-2 sm:border-4 border-primary/20">
-            <Settings className="h-8 w-8 sm:h-12 sm:w-12 text-primary" />
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-black mb-4 tracking-tight">Teacher Access</h1>
-          <p className="text-base sm:text-xl text-muted-foreground mb-8 sm:mb-10 leading-relaxed">
-            Ready to innovate your classroom? Sign in with your teacher account to create classes and manage word lists.
-          </p>
-          <Button 
-            onClick={handleSignIn} 
-            disabled={isLoggingIn}
-            className="btn-bouncy w-full sm:w-auto px-8 sm:px-12 py-6 sm:py-8 text-xl sm:text-2xl bg-primary text-white shadow-xl flex items-center justify-center gap-3 h-auto"
-          >
-            {isLoggingIn ? <Loader2 className="h-6 w-6 animate-spin" /> : <LogIn className="h-6 w-6" />}
-            {isLoggingIn ? "Signing In..." : "Teacher Login"}
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center space-y-8">
+        <div className="bg-white/80 backdrop-blur-2xl p-16 rounded-[4rem] border-8 border-white shadow-3xl max-w-2xl w-full">
+          <Settings className="h-24 w-24 text-primary mx-auto mb-8" />
+          <h1 className="text-5xl font-black mb-4">Teacher Access</h1>
+          <p className="text-xl text-muted-foreground mb-10">Sign in to manage your classrooms and custom word lists.</p>
+          <Button onClick={handleSignIn} disabled={isLoggingIn} className="btn-bouncy px-12 py-8 text-2xl bg-primary text-white shadow-xl h-auto">
+            {isLoggingIn ? <Loader2 className="h-6 w-6 animate-spin mr-2" /> : <LogIn className="h-6 w-6 mr-2" />}
+            Teacher Login
           </Button>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/")} className="text-muted-foreground font-black flex items-center gap-2 hover:text-primary transition-colors text-sm sm:text-base">
-          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" /> Back to Lobby
-        </Button>
+        <Button variant="ghost" onClick={() => router.push("/")} className="text-muted-foreground font-black flex items-center gap-2"><ArrowLeft /> Back to Lobby</Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-8 md:p-12 max-w-6xl mx-auto space-y-6 md:space-y-8 relative z-10">
+    <div className="min-h-screen bg-background p-4 sm:p-12 max-w-6xl mx-auto space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
-          <Button variant="outline" size="icon" onClick={() => router.push("/")} className="rounded-xl bg-white shadow-sm border-2 shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-black flex items-center gap-2 truncate">
-              <LayoutDashboard className="text-primary h-5 w-5 sm:h-8 sm:w-8" /> Teacher Dashboard
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">Empower your pupils with fun spelling!</p>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.push("/")} className="rounded-xl shrink-0"><ArrowLeft /></Button>
+          <div>
+            <h1 className="text-3xl font-black flex items-center gap-2">Teacher Dashboard</h1>
+            <p className="text-sm text-muted-foreground font-medium">Manage your class and curriculum</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto justify-center md:justify-end">
-          <Link href="/admin" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full rounded-xl font-bold border-2 bg-white hover:bg-orange-50 hover:border-orange-200 transition-all text-xs sm:text-sm">
-              <BookOpen className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-orange-500" /> Manage Bank
-            </Button>
-          </Link>
+        <div className="flex gap-3">
+          <Link href="/admin"><Button variant="outline" className="rounded-xl font-bold"><BookOpen className="mr-2 h-5 w-5 text-orange-500" /> Word Bank</Button></Link>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full sm:w-auto rounded-xl bg-primary hover:bg-primary/90 font-bold px-4 sm:px-6 shadow-md hover:shadow-lg transition-all text-xs sm:text-sm">
-                <Plus className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Class
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 w-[95vw] sm:max-w-lg">
+            <DialogTrigger asChild><Button className="rounded-xl bg-primary hover:bg-primary/90 font-bold px-6 shadow-md"><Plus className="mr-2 h-5 w-5" /> New Class</Button></DialogTrigger>
+            <DialogContent className="rounded-[3rem] p-12 max-w-lg">
               <DialogHeader>
-                <DialogTitle className="text-2xl sm:text-3xl font-black">New Classroom</DialogTitle>
-                <DialogDescription className="text-sm sm:text-lg font-medium">Give your new class a name to start assigning words.</DialogDescription>
+                <DialogTitle className="text-3xl font-black">Create Class</DialogTitle>
+                <DialogDescription>Enter a name for your new classroom.</DialogDescription>
               </DialogHeader>
-              <div className="py-4 sm:py-8 space-y-4 sm:space-y-6">
-                <div className="space-y-2 sm:space-y-3">
-                  <Label className="font-bold text-base sm:text-lg">Class Name</Label>
-                  <Input 
-                    placeholder="e.g., Year 3 Blue" 
-                    value={newClassName} 
-                    onChange={(e) => setNewClassName(e.target.value)} 
-                    className="rounded-xl sm:rounded-2xl border-2 sm:border-4 border-muted focus:border-primary h-12 sm:h-16 text-lg sm:text-xl px-4 sm:px-6 transition-all"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  onClick={handleCreateClass} 
-                  className="w-full btn-bouncy bg-primary text-white h-12 sm:h-16 rounded-xl sm:rounded-2xl font-black text-lg sm:text-xl shadow-xl"
-                >
-                  <Check className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3" />
-                  CREATE CLASS!
-                </Button>
-              </DialogFooter>
+              <div className="py-8"><Input placeholder="e.g., Year 3 Blue" value={newClassName} onChange={(e) => setNewClassName(e.target.value)} className="h-16 text-xl rounded-2xl" /></div>
+              <DialogFooter><Button onClick={handleCreateClass} className="w-full btn-bouncy bg-primary text-white h-16 rounded-2xl text-xl font-black">CREATE CLASS!</Button></DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-8">
-        <aside className="md:col-span-1 space-y-3 md:space-y-4">
-          <h3 className="font-black text-[10px] sm:text-sm uppercase tracking-widest text-muted-foreground ml-2">My Classrooms</h3>
-          <div className="flex flex-row md:flex-col gap-2 sm:gap-3 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <aside className="md:col-span-1 space-y-4">
+          <h3 className="font-black text-sm uppercase tracking-widest text-muted-foreground">My Classes</h3>
+          <div className="flex flex-col gap-3">
             {myClasses?.map(c => (
               <Button 
                 key={c.id}
                 variant={selectedClassId === c.id ? "default" : "outline"}
                 onClick={() => setSelectedClassId(c.id)}
-                className={`justify-start h-12 sm:h-16 rounded-xl sm:rounded-2xl border-2 font-bold transition-all shadow-sm shrink-0 md:shrink ${selectedClassId === c.id ? 'bg-primary border-primary md:scale-105 shadow-md text-white' : 'bg-white hover:border-primary/30 text-foreground'}`}
+                className={`justify-start h-16 rounded-2xl border-2 font-bold transition-all ${selectedClassId === c.id ? 'bg-primary border-primary text-white scale-105 shadow-md' : 'bg-white'}`}
               >
-                <Users className={`mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 ${selectedClassId === c.id ? 'text-white' : 'text-accent'}`} /> 
-                <span className="truncate max-w-[120px] sm:max-w-none">{c.name}</span>
+                <Users className={`mr-2 h-5 w-5 ${selectedClassId === c.id ? 'text-white' : 'text-accent'}`} /> {c.name}
               </Button>
             ))}
-            {myClasses?.length === 0 && (
-              <div className="text-center p-4 sm:p-8 text-muted-foreground bg-white/50 rounded-2xl sm:rounded-3xl border-2 border-dashed flex flex-col items-center gap-2 w-full">
-                <Users className="h-6 w-6 sm:h-8 sm:w-8 opacity-20" />
-                <p className="text-[10px] sm:text-sm font-bold">No classes yet.</p>
-              </div>
-            )}
           </div>
         </aside>
 
         <main className="md:col-span-3">
           {selectedClass ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-              <Card className="rounded-[2rem] sm:rounded-[3rem] border-4 sm:border-8 border-white shadow-2xl overflow-hidden bg-white/90 backdrop-blur-xl">
-                <CardContent className="p-6 sm:p-12 flex flex-col sm:flex-row justify-between items-center gap-6 sm:gap-8">
-                   <div className="space-y-1 sm:space-y-2 text-center sm:text-left">
-                      <h2 className="text-2xl sm:text-5xl font-black text-foreground tracking-tight">{selectedClass.name}</h2>
-                      <p className="text-sm sm:text-xl text-muted-foreground font-bold italic">Curriculum & Student Progress</p>
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+              <Card className="rounded-[3rem] border-8 border-white shadow-2xl bg-white/90 backdrop-blur-xl">
+                <CardContent className="p-12 flex flex-col md:flex-row justify-between items-center gap-8">
+                   <div className="text-center md:text-left">
+                      <h2 className="text-5xl font-black">{selectedClass.name}</h2>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="font-black">{selectedClass.assignedWordIds?.length || 0} Words Assigned</Badge>
+                        <Badge variant="outline" className="font-black">{pupils?.length || 0} Pupils Joined</Badge>
+                      </div>
                    </div>
-                   <div className="bg-accent/10 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 sm:border-4 border-accent/20 flex flex-col items-center gap-1 shadow-inner w-full sm:w-auto">
-                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-accent">Student Join Code</span>
-                      <button onClick={() => copyCode(selectedClass.code)} className="flex items-center gap-2 sm:gap-3 group">
-                         <span className="text-2xl sm:text-4xl font-black text-accent tracking-widest">{selectedClass.code}</span>
-                         <Copy className="h-4 w-4 sm:h-5 sm:w-5 text-accent group-hover:scale-125 transition-transform" />
+                   <div className="bg-accent/10 p-6 rounded-[2rem] border-4 border-accent/20 flex flex-col items-center gap-1 shadow-inner">
+                      <span className="text-[10px] font-black uppercase text-accent">Pupil Join Code</span>
+                      <button onClick={() => copyCode(selectedClass.code)} className="flex items-center gap-3 group">
+                         <span className="text-4xl font-black text-accent tracking-widest">{selectedClass.code}</span>
+                         <Copy className="h-5 w-5 text-accent group-hover:scale-125 transition-transform" />
                       </button>
                    </div>
                 </CardContent>
               </Card>
 
               <Tabs defaultValue="assignments" className="w-full">
-                <TabsList className="bg-white/50 backdrop-blur-sm p-1 h-12 sm:h-16 rounded-xl sm:rounded-2xl border-2 mb-4 sm:mb-6 w-full md:w-fit flex">
-                  <TabsTrigger value="assignments" className="flex-1 sm:flex-none rounded-lg sm:rounded-xl font-bold h-full px-4 sm:px-10 data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm">Assignments</TabsTrigger>
-                  <TabsTrigger value="pupils" className="flex-1 sm:flex-none rounded-lg sm:rounded-xl font-bold h-full px-4 sm:px-10 data-[state=active]:bg-secondary data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-xs sm:text-sm">Pupil Progress</TabsTrigger>
+                <TabsList className="bg-white/50 p-1 h-16 rounded-2xl border-2 mb-6 w-full md:w-fit">
+                  <TabsTrigger value="assignments" className="flex-1 rounded-xl font-bold h-full px-10 data-[state=active]:bg-primary data-[state=active]:text-white">Assignments</TabsTrigger>
+                  <TabsTrigger value="pupils" className="flex-1 rounded-xl font-bold h-full px-10 data-[state=active]:bg-secondary data-[state=active]:text-white">Progress</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="assignments" className="space-y-4 sm:space-y-6 animate-in fade-in zoom-in duration-300 outline-none">
-                  <div className="flex flex-col sm:flex-row justify-between items-center px-2 gap-2">
-                     <div className="text-center sm:text-left">
-                       <h3 className="text-xl sm:text-2xl font-black">Curriculum Builder</h3>
-                       <p className="text-xs sm:text-sm font-medium text-muted-foreground">Select words to assign to this class.</p>
-                     </div>
-                     <Link href="/admin">
-                        <Button variant="ghost" size="sm" className="text-primary font-black hover:bg-primary/5 text-[10px] sm:text-xs">
-                          Open Word Bank <ExternalLink className="ml-1 h-3 w-3" />
+                <TabsContent value="assignments" className="space-y-6 outline-none">
+                  <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white/50 p-4 rounded-3xl border-2">
+                    <div className="relative w-full md:w-72">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input placeholder="Search word bank..." value={assignmentSearch} onChange={e => setAssignmentSearch(e.target.value)} className="pl-9 rounded-xl" />
+                    </div>
+                    <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+                      <Filter className="h-4 w-4 text-muted-foreground hidden md:block" />
+                      {(["all", "beginner", "intermediate", "advanced"] as const).map(lvl => (
+                        <Button 
+                          key={lvl} 
+                          variant={assignmentFilter === lvl ? "secondary" : "ghost"} 
+                          size="sm" 
+                          onClick={() => setAssignmentFilter(lvl)}
+                          className="rounded-full font-black text-[10px] uppercase"
+                        >
+                          {lvl}
                         </Button>
-                     </Link>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button variant="outline" size="sm" onClick={handleAssignAll} className="rounded-xl font-bold border-2">Assign Page</Button>
+                      <Button variant="ghost" size="sm" onClick={handleRemoveAll} className="rounded-xl font-bold text-destructive">Clear Page</Button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    {allWords.map(word => {
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredAssignments.map(word => {
                       const isAssigned = selectedClass.assignedWordIds?.includes(word.id);
                       return (
-                        <Card key={word.id} className={`rounded-2xl sm:rounded-3xl border-2 sm:border-4 transition-all duration-300 ${isAssigned ? 'border-primary bg-primary/5 shadow-md scale-[1.01]' : 'border-white bg-white/50 hover:border-primary/20 shadow-sm'}`}>
-                          <CardContent className="p-4 sm:p-6 flex justify-between items-center gap-4 sm:gap-6">
-                            <div className="flex-1 min-w-0">
-                               <p className="text-lg sm:text-2xl font-black uppercase text-foreground truncate">{word.word}</p>
-                               <div className="flex flex-wrap gap-1.5 mt-1">
-                                 <span className="text-[8px] sm:text-[10px] font-black text-muted-foreground uppercase bg-muted/20 px-1.5 py-0.5 rounded-full">{word.difficulty}</span>
-                                 <span className="text-[8px] sm:text-[10px] font-black text-accent uppercase bg-accent/10 px-1.5 py-0.5 rounded-full">{word.theme || "General"}</span>
-                               </div>
+                        <Card key={word.id} className={`rounded-3xl border-4 transition-all ${isAssigned ? 'border-primary bg-primary/5 shadow-md' : 'border-white bg-white/50 shadow-sm'}`}>
+                          <CardContent className="p-6 flex flex-col gap-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="text-2xl font-black uppercase">{word.word}</h4>
+                                <Badge variant="outline" className="text-[10px] uppercase mt-1">{word.difficulty}</Badge>
+                              </div>
+                              <Button 
+                                size="icon" 
+                                variant="ghost"
+                                onClick={() => toggleWordAssignment(word.id)}
+                                className={`rounded-full h-12 w-12 border-2 ${isAssigned ? 'bg-primary border-primary text-white hover:bg-primary/80' : 'border-muted hover:border-primary/50'}`}
+                              >
+                                {isAssigned ? <CheckCircle className="h-6 w-6" /> : <Circle className="h-6 w-6" />}
+                              </Button>
                             </div>
-                            <Button 
-                              size="sm" 
-                              variant={isAssigned ? "default" : "outline"}
-                              onClick={() => toggleWordAssignment(word.id)}
-                              className={`rounded-lg sm:rounded-xl font-black h-10 sm:h-12 px-4 sm:px-6 text-[10px] sm:text-xs ${isAssigned ? 'bg-primary' : 'border-2'}`}
-                            >
-                              {isAssigned ? <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> : <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />}
-                              {isAssigned ? "Remove" : "Assign"}
-                            </Button>
+                            <p className="text-sm italic text-muted-foreground line-clamp-2">"{word.definition}"</p>
                           </CardContent>
                         </Card>
                       );
@@ -354,60 +309,45 @@ export default function TeacherDashboard() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="pupils" className="space-y-4 sm:space-y-6 animate-in fade-in zoom-in duration-300 outline-none">
-                  <div className="space-y-3 sm:space-y-4">
-                    {pupils?.map(p => (
-                      <Card key={p.id} className="rounded-2xl sm:rounded-3xl border-2 sm:border-4 border-white bg-white/80 shadow-md hover:shadow-lg transition-all overflow-hidden">
-                        <CardContent className="p-4 sm:p-8 flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6">
-                          <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
-                            <div className="bg-secondary/10 p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 border-secondary/20 shadow-inner shrink-0">
-                              <Trophy className="text-secondary h-6 w-6 sm:h-8 sm:w-8" />
-                            </div>
-                            <div className="min-w-0">
-                               <p className="text-lg sm:text-2xl font-black truncate">{p.pupilName || "Explorer"}</p>
-                               <p className="text-[8px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-widest truncate">ID: {p.id.substring(0, 8)}</p>
-                            </div>
+                <TabsContent value="pupils" className="space-y-4 outline-none">
+                  {pupils?.map(p => (
+                    <Card key={p.id} className="rounded-3xl border-4 border-white bg-white/80 shadow-md">
+                      <CardContent className="p-8 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-secondary/10 p-4 rounded-2xl border-2 border-secondary/20 shadow-inner"><Trophy className="text-secondary h-8 w-8" /></div>
+                          <div>
+                             <p className="text-2xl font-black">{p.pupilName || "Explorer"}</p>
+                             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Pupil ID: {p.id.substring(0, 8)}</p>
                           </div>
-                          <div className="flex gap-4 sm:gap-6 w-full sm:w-auto justify-center sm:justify-end border-t sm:border-t-0 pt-3 sm:pt-0">
-                            <div className="text-center">
-                               <p className="text-[8px] sm:text-[10px] font-black uppercase text-muted-foreground mb-0.5 sm:mb-1">Stars</p>
-                               <p className="text-xl sm:text-3xl font-black text-primary">{p.stars}</p>
-                            </div>
-                            <div className="text-center border-l-2 pl-4 sm:pl-6">
-                               <p className="text-[8px] sm:text-[10px] font-black uppercase text-muted-foreground mb-0.5 sm:mb-1">Mastered</p>
-                               <p className="text-xl sm:text-3xl font-black text-secondary">{p.wordsMastered}</p>
-                            </div>
+                        </div>
+                        <div className="flex gap-8">
+                          <div className="text-center">
+                             <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Stars</p>
+                             <p className="text-3xl font-black text-primary">{p.stars}</p>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {pupils?.length === 0 && (
-                       <div className="text-center py-10 sm:py-20 bg-white/40 rounded-[2rem] sm:rounded-[4rem] border-2 sm:border-4 border-dashed border-white flex flex-col items-center gap-3 sm:gap-4">
-                          <div className="bg-white p-6 sm:p-8 rounded-full shadow-lg border-2 border-muted/20">
-                            <Users className="h-10 w-10 sm:h-16 sm:w-16 text-muted opacity-30" />
+                          <div className="text-center border-l-2 pl-8">
+                             <p className="text-[10px] font-black uppercase text-muted-foreground mb-1">Mastered</p>
+                             <p className="text-3xl font-black text-secondary">{p.wordsMastered}</p>
                           </div>
-                          <p className="text-base sm:text-xl font-bold text-muted-foreground max-w-[200px] sm:max-w-xs">No pupils joined yet.</p>
-                          <p className="text-[10px] sm:text-sm text-muted-foreground italic">Share code <b>{selectedClass.code}</b> with students!</p>
-                       </div>
-                    )}
-                  </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {pupils?.length === 0 && (
+                    <div className="text-center py-20 bg-white/40 rounded-[4rem] border-4 border-dashed border-white flex flex-col items-center gap-4">
+                       <Users className="h-16 w-16 opacity-20" />
+                       <p className="text-xl font-bold text-muted-foreground">Share code {selectedClass.code} with your pupils!</p>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
           ) : (
-            <div className="min-h-[40vh] sm:h-[60vh] flex flex-col items-center justify-center text-center bg-white/40 border-4 sm:border-8 border-white rounded-[2rem] sm:rounded-[4rem] shadow-3xl p-6 sm:p-12 space-y-6 sm:space-y-8 animate-in fade-in duration-700">
-               <div className="bg-white p-6 sm:p-12 rounded-full shadow-2xl border-2 sm:border-4 border-primary/20 rotate-3">
-                  <LayoutDashboard className="h-12 w-12 sm:h-24 sm:w-24 text-primary animate-bounce-subtle" />
-               </div>
-               <div className="space-y-2 sm:space-y-4">
-                  <h3 className="text-2xl sm:text-4xl font-black tracking-tight">Select a Classroom</h3>
-                  <p className="text-sm sm:text-xl font-medium text-muted-foreground max-w-md mx-auto leading-relaxed px-2">
-                    Choose a class from the sidebar to build curriculum and track success!
-                  </p>
-               </div>
-               <Button onClick={() => setIsCreateOpen(true)} variant="outline" className="rounded-full border-2 sm:border-4 h-12 sm:h-16 px-6 sm:px-10 text-base sm:text-xl font-black hover:bg-primary hover:text-white transition-all">
-                 <Plus className="mr-2 h-5 w-5 sm:h-6 sm:w-6" /> Create Class
-               </Button>
+            <div className="h-[60vh] flex flex-col items-center justify-center text-center bg-white/40 border-8 border-white rounded-[4rem] shadow-3xl p-12 space-y-8 animate-in fade-in">
+               <LayoutDashboard className="h-24 w-24 text-primary animate-bounce-subtle" />
+               <h3 className="text-4xl font-black">Select a Class</h3>
+               <p className="text-xl text-muted-foreground max-w-md mx-auto">Choose a classroom from the sidebar to manage assignments and track student progress!</p>
+               <Button onClick={() => setIsCreateOpen(true)} className="rounded-full px-10 h-16 text-xl font-black bg-primary text-white shadow-xl">Create Class</Button>
             </div>
           )}
         </main>
