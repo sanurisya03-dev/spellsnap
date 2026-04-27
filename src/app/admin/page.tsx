@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Volume2, Sparkles } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Volume2, Sparkles, CheckCircle, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -25,11 +25,12 @@ import { getPronunciation } from "@/ai/flows/pronunciation-flow";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { toast } = useToast();
-  const { allWords, customWords, addCustomWord, deleteCustomWord, isLoaded } = useGameStore();
+  const { allWords, customWords, addCustomWord, deleteCustomWord, isLoaded, activeClass, toggleWordAssignment } = useGameStore();
   
   const [searchTerm, setSearchTerm] = useState("");
   const [newWord, setNewWord] = useState({ 
@@ -105,14 +106,14 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background p-4 sm:p-12 max-w-6xl mx-auto space-y-8">
       <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => router.push("/teacher")} className="rounded-xl shrink-0">
+          <Button variant="outline" size="icon" onClick={() => router.push("/")} className="rounded-xl shrink-0">
             <ArrowLeft />
           </Button>
           <div>
             <h1 className="text-3xl font-black flex items-center gap-2">
               <GraduationCap className="text-accent h-8 w-8" /> Word Bank
             </h1>
-            <p className="text-sm text-muted-foreground font-medium">Manage all spelling words and visuals</p>
+            <p className="text-sm text-muted-foreground font-medium">Manage all spelling words and assignments</p>
           </div>
         </div>
 
@@ -199,8 +200,13 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredWords.map((word) => {
             const isCustom = customWords.some(w => w.id === word.id);
+            const isAssigned = activeClass?.assignedWordIds?.includes(word.id);
+            
             return (
-              <Card key={word.id} className="rounded-[3rem] border-8 border-white shadow-2xl overflow-hidden flex flex-col group transition-all hover:-translate-y-2">
+              <Card key={word.id} className={cn(
+                "rounded-[3rem] border-8 shadow-2xl overflow-hidden flex flex-col group transition-all hover:-translate-y-2",
+                isAssigned ? "border-primary/40 bg-primary/5" : "border-white bg-background"
+              )}>
                 <div className="aspect-video relative bg-muted">
                   <Image 
                     src={word.imageUrl || `https://picsum.photos/seed/${word.id}/600/400`} 
@@ -208,15 +214,30 @@ export default function AdminDashboard() {
                     fill
                     className="object-cover group-hover:scale-105 transition-transform"
                   />
-                  <div className="absolute top-4 left-4 flex gap-2">
+                  <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                     <Badge className="bg-white/90 text-primary font-black uppercase text-[10px]">{word.difficulty}</Badge>
-                    {isCustom ? (
-                      <Badge className="bg-accent text-white font-black uppercase text-[10px]">Custom</Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-white/90 text-muted-foreground font-black uppercase text-[10px]">System</Badge>
-                    )}
+                    {isCustom && <Badge className="bg-accent text-white font-black uppercase text-[10px]">Custom</Badge>}
+                    {isAssigned && <Badge className="bg-primary text-white font-black uppercase text-[10px]">Assigned</Badge>}
                   </div>
+                  
+                  {activeClass && (
+                    <div className="absolute top-4 right-4">
+                       <Button 
+                        size="icon" 
+                        variant={isAssigned ? "default" : "secondary"}
+                        onClick={() => toggleWordAssignment(word.id)}
+                        className={cn(
+                          "rounded-full h-10 w-10 shadow-lg border-2 border-white",
+                          isAssigned ? "bg-primary text-white" : "bg-white/90 text-muted-foreground"
+                        )}
+                        title={isAssigned ? "Remove from Class" : "Assign to Class"}
+                      >
+                        {isAssigned ? <CheckCircle className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                      </Button>
+                    </div>
+                  )}
                 </div>
+
                 <CardHeader className="p-6 pb-2">
                   <div className="flex justify-between items-center">
                     <CardTitle className="text-3xl font-black text-primary uppercase">{word.word}</CardTitle>

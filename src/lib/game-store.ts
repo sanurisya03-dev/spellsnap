@@ -125,6 +125,16 @@ export function useGameStore() {
     }
   }, [statsRef, user, firebaseStats?.activeClassId, db]);
 
+  const toggleWordAssignment = useCallback((wordId: string) => {
+    if (!db || !activeClass) return;
+    const current = activeClass.assignedWordIds || [];
+    const next = current.includes(wordId) 
+      ? current.filter(id => id !== wordId)
+      : [...current, wordId];
+    
+    setDoc(doc(db, 'classrooms', activeClass.id), { assignedWordIds: next }, { merge: true });
+  }, [db, activeClass]);
+
   const addStars = useCallback((amount: number) => updateStats({ stars: increment(amount) }), [updateStats]);
   const addCorrectLetter = useCallback(() => updateStats({ correctLetters: increment(1) }), [updateStats]);
   const addWordMastered = useCallback(() => updateStats({ wordsMastered: increment(1) }), [updateStats]);
@@ -175,6 +185,7 @@ export function useGameStore() {
     activeClass,
     joinClass,
     leaveClass,
+    toggleWordAssignment,
     addStars,
     addCorrectLetter,
     addWordMastered,
