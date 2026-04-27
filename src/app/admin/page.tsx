@@ -47,7 +47,6 @@ export default function AdminDashboard() {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingPronunciation, setIsGeneratingPronunciation] = useState(false);
   
-  // State for revealed actions overlay
   const [revealedWordId, setRevealedWordId] = useState<string | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -99,7 +98,8 @@ export default function AdminDashboard() {
     w.difficulty.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (id: string, word: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string, word: string) => {
+    e.stopPropagation();
     if (confirm(`Are you sure you want to delete "${word}" from the bank?`)) {
       deleteCustomWord(id);
       setRevealedWordId(null);
@@ -107,11 +107,17 @@ export default function AdminDashboard() {
     }
   };
 
-  // Gesture Handlers
+  const handleAssign = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    toggleWordAssignment(id);
+    setRevealedWordId(null);
+    toast({ title: "Word Status Updated" });
+  };
+
   const handleTouchStart = (id: string) => {
     longPressTimer.current = setTimeout(() => {
       setRevealedWordId(id);
-    }, 600); // 600ms hold for long press
+    }, 600);
   };
 
   const handleTouchEnd = () => {
@@ -249,7 +255,10 @@ export default function AdminDashboard() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      onClick={() => setRevealedWordId(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRevealedWordId(null);
+                      }}
                       className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full"
                     >
                       <X className="h-8 w-8" />
@@ -260,10 +269,7 @@ export default function AdminDashboard() {
                     <div className="w-full flex flex-col gap-3">
                       {activeClass ? (
                         <Button 
-                          onClick={() => {
-                            toggleWordAssignment(word.id);
-                            setRevealedWordId(null);
-                          }}
+                          onClick={(e) => handleAssign(e, word.id)}
                           className={cn(
                             "w-full h-14 rounded-2xl font-black text-lg",
                             isAssigned ? "bg-white text-primary" : "bg-primary text-white"
@@ -273,13 +279,16 @@ export default function AdminDashboard() {
                           {isAssigned ? "REMOVE FROM CLASS" : "ASSIGN TO CLASS"}
                         </Button>
                       ) : (
-                        <p className="text-white/60 text-xs font-bold text-center">Join a class to assign words</p>
+                        <div className="text-center space-y-2">
+                           <p className="text-white/60 text-[10px] font-bold">Join or Create a class to assign words</p>
+                           <Button variant="link" className="text-white text-xs" onClick={() => router.push("/")}>Go to Lobby</Button>
+                        </div>
                       )}
                       
                       {isCustom && (
                         <Button 
                           variant="destructive" 
-                          onClick={() => handleDelete(word.id, word.word)}
+                          onClick={(e) => handleDelete(e, word.id, word.word)}
                           className="w-full h-14 rounded-2xl font-black text-lg"
                         >
                           <Trash2 className="mr-2" /> DELETE WORD
@@ -295,6 +304,7 @@ export default function AdminDashboard() {
                     alt={word.word}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform"
+                    unoptimized={word.imageUrl?.startsWith('data:')}
                   />
                   <div className="absolute top-4 left-4 flex flex-wrap gap-2">
                     <Badge className="bg-white/90 text-primary font-black uppercase text-[10px]">{word.difficulty}</Badge>
