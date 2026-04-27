@@ -148,7 +148,7 @@ export function useGameStore() {
   const addWordMastered = useCallback(() => updateStats({ wordsMastered: increment(1) }), [updateStats]);
 
   const joinClass = useCallback(async (code: string) => {
-    if (!db || !user?.uid || !statsRef) return false;
+    if (!db || !user?.uid) return false;
     
     const q = query(collection(db, 'classrooms'), where('code', '==', code.toUpperCase()), limit(1));
     const snapshot = await getDocs(q);
@@ -157,13 +157,20 @@ export function useGameStore() {
     
     const classDoc = snapshot.docs[0];
     
-    setDoc(statsRef, { activeClassId: classDoc.id }, { merge: true });
+    // Update global user stats
+    const mainStatsRef = doc(db, 'users', user.uid, 'stats', 'main');
+    await setDoc(mainStatsRef, { activeClassId: classDoc.id }, { merge: true });
     
+    // Create/Update pupil record in the specific classroom
     const pRef = doc(db, 'classrooms', classDoc.id, 'pupils', user.uid);
-    setDoc(pRef, { pupilName: user.displayName || "Pupil", stars: 0, wordsMastered: 0 }, { merge: true });
+    await setDoc(pRef, { 
+      pupilName: user.displayName || "Explorer", 
+      stars: 0, 
+      wordsMastered: 0 
+    }, { merge: true });
     
     return true;
-  }, [db, user, statsRef]);
+  }, [db, user]);
 
   const leaveClass = useCallback(() => {
     if (!statsRef) return;
