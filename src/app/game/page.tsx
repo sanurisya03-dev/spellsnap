@@ -65,6 +65,8 @@ export default function GamePage() {
   const handleStartMemorizing = () => {
     setTimer(10);
     setGameState("memorizing");
+    // Auto-play audio when starting memorization
+    playAudio();
   };
 
   const startSpellingChallenge = () => {
@@ -206,14 +208,25 @@ export default function GamePage() {
                     Ready to Learn?
                   </div>
                   {currentWord.audioUrl && (
-                    <Button variant="ghost" size="icon" onClick={playAudio} className="rounded-full bg-accent/10 text-accent hover:bg-accent/20">
-                      <Volume2 className="h-4 w-4 md:h-6 md:w-6" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={playAudio} 
+                      className="rounded-full bg-accent h-10 w-10 md:h-14 md:w-14 text-white hover:bg-accent/90 shadow-lg animate-bounce-subtle"
+                    >
+                      <Volume2 className="h-5 w-5 md:h-8 md:w-8" />
                     </Button>
                   )}
                 </div>
-                <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-primary uppercase sparkle-text leading-tight break-all">
+                <button 
+                  onClick={playAudio}
+                  className="group relative text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-primary uppercase sparkle-text leading-tight break-all transition-transform active:scale-95 text-left"
+                >
                   {currentWord.word}
-                </h2>
+                  <span className="absolute -top-4 -right-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Volume2 className="h-6 w-6 text-accent" />
+                  </span>
+                </button>
                 {currentWord.phonemes && (
                    <p className="text-xl md:text-3xl font-black text-accent/80 tracking-widest -mt-2 md:-mt-4">
                      {currentWord.phonemes}
@@ -240,7 +253,10 @@ export default function GamePage() {
         {gameState === "memorizing" && currentWord && (
           <div className="text-center space-y-6 md:space-y-12 animate-in fade-in zoom-in duration-500 w-full">
             <div className="relative inline-block max-w-full">
-              <div className="bg-white p-6 md:p-20 rounded-[2rem] md:rounded-[5rem] shadow-3xl border-4 md:border-12 border-primary/20 overflow-hidden flex flex-col items-center justify-center min-h-[150px] md:min-h-[400px]">
+              <button 
+                onClick={playAudio}
+                className="group relative bg-white p-6 md:p-20 rounded-[2rem] md:rounded-[5rem] shadow-3xl border-4 md:border-12 border-primary/20 overflow-hidden flex flex-col items-center justify-center min-h-[150px] md:min-h-[400px] transition-all active:scale-95"
+              >
                  <p className="text-[min(15vw,8rem)] font-black text-primary tracking-tighter uppercase sparkle-text break-all leading-none">
                    {currentWord.word}
                  </p>
@@ -249,7 +265,10 @@ export default function GamePage() {
                       {currentWord.phonemes}
                     </p>
                  )}
-              </div>
+                 <div className="absolute top-4 right-4 md:top-10 md:right-10 opacity-40 group-hover:opacity-100 transition-opacity">
+                   <Volume2 className="h-6 w-6 md:h-12 md:w-12 text-accent" />
+                 </div>
+              </button>
               <div className="absolute -top-4 -right-4 md:-top-12 md:-right-12 bg-accent h-12 w-12 md:h-32 md:w-32 rounded-full shadow-2xl border-2 md:border-8 border-white flex flex-col items-center justify-center animate-bounce-subtle">
                   <Clock className="h-3 w-3 md:h-8 md:w-8 text-white mb-0.5 md:mb-1" />
                   <span className="text-lg md:text-5xl font-black text-white">{timer}</span>
@@ -257,7 +276,7 @@ export default function GamePage() {
             </div>
             <div className="bg-white/50 backdrop-blur-md px-4 md:px-12 py-2 md:py-6 rounded-full border-2 md:border-4 border-white shadow-xl inline-block">
                <h2 className="text-lg md:text-4xl font-black text-foreground uppercase">Memorize Now!</h2>
-               <p className="text-xs md:text-xl font-bold text-muted-foreground mt-0.5">The letters will hide soon...</p>
+               <p className="text-xs md:text-xl font-bold text-muted-foreground mt-0.5">Click the word to hear it again!</p>
             </div>
           </div>
         )}
@@ -271,7 +290,12 @@ export default function GamePage() {
                     <img src={currentWord.imageUrl || `https://picsum.photos/seed/${currentWord.word.toLowerCase()}/200/200`} alt="hint" className="object-cover h-full w-full" />
                   </div>
                   {currentWord.audioUrl && (
-                    <Button size="lg" variant="secondary" onClick={playAudio} className="rounded-full h-12 w-12 md:h-20 md:w-20 bg-accent text-white shadow-lg border-2 md:border-4 border-white">
+                    <Button 
+                      size="lg" 
+                      variant="secondary" 
+                      onClick={playAudio} 
+                      className="rounded-full h-12 w-12 md:h-20 md:w-20 bg-accent text-white shadow-lg border-2 md:border-4 border-white hover:bg-accent/90 animate-pulse"
+                    >
                       <Volume2 className="h-6 w-6 md:h-10 md:w-10" />
                     </Button>
                   )}
