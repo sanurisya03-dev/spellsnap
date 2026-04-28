@@ -68,8 +68,16 @@ export default function TeacherDashboard() {
       await signInWithPopup(auth, provider);
       toast({ title: "Welcome Teacher!", description: `Signed in as ${auth.currentUser?.displayName}` });
     } catch (error: any) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Login Failed", description: error.message });
+      if (error.code === 'auth/unauthorized-domain') {
+        toast({
+          variant: "destructive",
+          title: "Domain Not Authorized",
+          description: "Please add this domain to Authorized Domains in the Firebase Console.",
+        });
+      } else {
+        console.error(error);
+        toast({ variant: "destructive", title: "Login Failed", description: error.message });
+      }
     } finally {
       setIsLoggingIn(false);
     }

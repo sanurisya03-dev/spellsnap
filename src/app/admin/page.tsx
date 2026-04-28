@@ -3,9 +3,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Volume2, Sparkles, CheckCircle, Circle, MoreVertical, X, Lock, Settings2 } from "lucide-react";
+import { BookOpen, LogIn, Plus, Trash2, ArrowLeft, Search, GraduationCap, Loader2, Volume2, Sparkles, CheckCircle, Circle, MoreVertical, X, Lock, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useGameStore, type Difficulty } from "@/lib/game-store";
 import {
@@ -77,7 +76,7 @@ export default function AdminDashboard() {
         toast({
           variant: "destructive",
           title: "Domain Not Authorized",
-          description: "Please add this domain to Authorized Domains in Firebase Console.",
+          description: "Please add this domain to Authorized Domains in the Firebase Console.",
         });
       } else {
         console.error("Sign in failed:", error);
@@ -323,7 +322,10 @@ export default function AdminDashboard() {
                 {isRevealed && (
                   <div 
                     className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-8 space-y-8 animate-in fade-in zoom-in duration-200"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRevealedWordId(null);
+                    }}
                   >
                     <Button 
                       variant="ghost" 

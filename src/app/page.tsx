@@ -9,19 +9,30 @@ import { useGameStore } from "@/lib/game-store";
 import { useUser, useAuth } from "@/firebase";
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LobbyPage() {
   const { stats, isLoaded, activeClass, leaveClass, loadingData } = useGameStore();
   const { user, loading: userLoading } = useUser();
   const auth = useAuth();
+  const { toast } = useToast();
 
   const handleSignIn = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Sign in failed:", error);
+      toast({ title: "Welcome back!", description: "Ready to snap some words?" });
+    } catch (error: any) {
+      if (error.code === 'auth/unauthorized-domain') {
+        toast({
+          variant: "destructive",
+          title: "Domain Not Authorized",
+          description: "Please add this domain to Authorized Domains in the Firebase Console.",
+        });
+      } else {
+        console.error("Sign in failed:", error);
+      }
     }
   };
 
@@ -29,6 +40,7 @@ export default function LobbyPage() {
     if (!auth) return;
     try {
       await signOut(auth);
+      toast({ title: "Signed out", description: "See you next time!" });
     } catch (error) {
       console.error("Sign out failed:", error);
     }
