@@ -9,6 +9,7 @@ import { useGameStore, type WordItem, type Difficulty } from "@/lib/game-store";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import confetti from "canvas-confetti";
 
 type GameState = "intro" | "memorizing" | "playing" | "success" | "finished";
 
@@ -26,6 +27,25 @@ export default function GamePage() {
   const [timer, setTimer] = useState(10);
   const [hiddenIndices, setHiddenIndices] = useState<number[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sound Effect Helpers
+  const playSfx = (type: 'success' | 'fail') => {
+    const urls = {
+      success: "https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3",
+      fail: "https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3"
+    };
+    const audio = new Audio(urls[type]);
+    audio.play().catch(() => {}); // Ignore play errors
+  };
+
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#F7A71C', '#335', '#195', '#B85122']
+    });
+  };
 
   useEffect(() => {
     if (!isLoaded || playableWords.length === 0 || wordsToPlay.length > 0) return;
@@ -149,12 +169,17 @@ export default function GamePage() {
     if (gameState === "playing" && currentWord && !userInput.includes("")) {
       const typed = userInput.join("");
       if (typed === currentWord.word.toUpperCase()) {
+        // Success Logic
         setGameState("success");
+        playSfx('success');
+        triggerConfetti();
         addStars(1);
         addWordMastered();
         addCorrectLetter();
       } else {
+        // Failure Logic
         setIsWrong(true);
+        playSfx('fail');
         setTimeout(() => {
           setIsWrong(false);
           setUserInput(prev => prev.map((char, i) => hiddenIndices.includes(i) ? "" : char));
