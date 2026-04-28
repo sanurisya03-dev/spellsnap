@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
-import { Sparkles, Play, Award, Settings, Star, LogIn, LogOut, User, Loader2, Rocket, Camera, Lightbulb, Cloud, Sun, DoorOpen, Users, BookOpen } from "lucide-react";
+import { Sparkles, Play, Award, Settings, Star, LogIn, LogOut, User, Loader2, Rocket, Camera, Lightbulb, Cloud, Sun, DoorOpen, Users, BookOpen, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGameStore } from "@/lib/game-store";
@@ -83,116 +84,93 @@ export default function LobbyPage() {
             </div>
           ) : (
             <Button onClick={handleSignIn} className="btn-bouncy bg-primary text-white px-4 md:px-10 h-10 md:h-16 text-sm md:text-xl">
-              <LogIn className="mr-1 md:mr-2 h-4 w-4 md:h-6 md:w-6" /> Join!
+              <LogIn className="mr-1 md:mr-2 h-4 w-4 md:h-6 md:w-6" /> Sign In
             </Button>
           )}
         </div>
       </header>
 
-      <main className="w-full max-w-5xl p-4 md:p-8 space-y-6 md:space-y-12 z-10 flex-1">
-        <section className="bg-white/60 backdrop-blur-2xl p-6 md:p-12 rounded-[2rem] md:rounded-[4rem] border-4 md:border-8 border-white shadow-3xl flex flex-col md:flex-row items-center gap-6 md:gap-12 text-center md:text-left">
-          <div className="flex-1 space-y-4 md:space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-3xl sm:text-4xl md:text-6xl font-black leading-tight text-foreground">
-                Ready to <span className="sparkle-text">Snap Words?</span>
-              </h2>
-              {activeClass && (
-                <div className="flex items-center gap-2 justify-center md:justify-start">
-                   <div className="bg-accent/10 px-2 py-1 md:px-3 md:py-1.5 rounded-full border-2 border-accent/20 flex items-center gap-2">
-                      <Users className="h-3 w-3 md:h-4 md:w-4 text-accent" />
-                      <span className="font-black text-accent uppercase tracking-tighter text-[8px] md:text-xs">Class: {activeClass.name}</span>
-                   </div>
-                   <Button variant="ghost" size="sm" onClick={leaveClass} className="text-[8px] md:text-[10px] font-bold text-muted-foreground hover:text-destructive">
-                     Leave
-                   </Button>
+      <main className="w-full max-w-5xl p-4 md:p-8 space-y-12 z-10 flex-1">
+        <section className="text-center space-y-4">
+          <h2 className="text-4xl md:text-7xl font-black tracking-tight text-foreground">
+            Welcome to <span className="sparkle-text">SpellSnap!</span>
+          </h2>
+          <p className="text-xl md:text-2xl font-bold text-muted-foreground max-w-2xl mx-auto">
+            Choose your portal to start snapping words or managing your classroom.
+          </p>
+        </section>
+
+        {/* Role Selection Cards */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Student Portal */}
+          <Link href="/join">
+            <Card className="rounded-[3rem] border-8 border-white bg-white/60 backdrop-blur-2xl shadow-3xl overflow-hidden group hover:scale-105 transition-all cursor-pointer h-full">
+              <CardContent className="p-10 flex flex-col items-center text-center space-y-6">
+                <div className="bg-accent p-8 rounded-[2rem] shadow-xl group-hover:rotate-6 transition-transform">
+                  <Play className="h-16 w-16 text-white fill-current" />
                 </div>
-              )}
-            </div>
-            <p className="text-base sm:text-lg md:text-2xl font-bold text-muted-foreground leading-relaxed">
-              {activeClass 
-                ? "Your teacher has assigned special words for you to learn!" 
-                : "Play games, earn stars, and become the classroom champion!"}
-            </p>
-            <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-6 pt-2 md:pt-4">
-              <div className="bg-white px-4 py-2 md:px-8 md:py-4 rounded-2xl md:rounded-3xl shadow-lg flex items-center gap-2 md:gap-3 border-2 md:border-4 border-primary/20">
-                <Star className="text-primary fill-primary h-5 w-5 md:h-8 md:w-8" />
-                <span className="font-black text-xl md:text-3xl">{stats.stars}</span>
-              </div>
-              <div className="bg-white px-4 py-2 md:px-8 md:py-4 rounded-2xl md:rounded-3xl shadow-lg flex items-center gap-2 md:gap-3 border-2 md:border-4 border-secondary/20">
-                <Award className="text-secondary h-5 w-5 md:h-8 md:w-8" />
-                <span className="font-black text-xl md:text-3xl">{stats.wordsMastered}</span>
-              </div>
-            </div>
-          </div>
-          <div className="relative group shrink-0 hidden sm:block">
-            <div className="absolute inset-0 bg-primary/30 rounded-full blur-3xl animate-pulse group-hover:bg-primary/50 transition-all" />
-            <div className="relative z-10 bg-white p-6 md:p-12 rounded-[3rem] md:rounded-[5rem] shadow-2xl border-4 md:border-8 border-primary/20 rotate-6 group-hover:rotate-0 transition-transform duration-500">
-               <Sun className="h-20 w-20 md:h-40 md:w-40 text-primary animate-spin-slow" />
-            </div>
-          </div>
+                <div>
+                  <h3 className="text-4xl font-black text-accent uppercase">I'm a Student</h3>
+                  <p className="text-lg font-bold text-muted-foreground mt-2">Join a class, earn stars, and play fun spelling games!</p>
+                </div>
+                <Button className="btn-bouncy bg-accent text-white h-16 px-12 text-xl w-full">Enter Student Portal</Button>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Teacher Portal */}
+          <Link href="/teacher">
+            <Card className="rounded-[3rem] border-8 border-white bg-white/60 backdrop-blur-2xl shadow-3xl overflow-hidden group hover:scale-105 transition-all cursor-pointer h-full">
+              <CardContent className="p-10 flex flex-col items-center text-center space-y-6">
+                <div className="bg-primary p-8 rounded-[2rem] shadow-xl group-hover:-rotate-6 transition-transform">
+                  <GraduationCap className="h-16 w-16 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-4xl font-black text-primary uppercase">I'm a Teacher</h3>
+                  <p className="text-lg font-bold text-muted-foreground mt-2">Create classes, assign words, and track pupil progress!</p>
+                </div>
+                <Button className="btn-bouncy bg-primary text-white h-16 px-12 text-xl w-full">Enter Teacher Portal</Button>
+              </CardContent>
+            </Card>
+          </Link>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-          {[
-            { id: 'beginner', title: 'Beginner', icon: Rocket, color: 'bg-primary', text: 'Short words (3-4 letters)' },
-            { id: 'intermediate', title: 'Explorer', icon: Camera, color: 'bg-accent', text: 'Medium words (5-7 letters)' },
-            { id: 'advanced', title: 'Wizard', icon: Lightbulb, color: 'bg-secondary', text: 'Complex words (8+ letters)' }
-          ].map((cat) => (
-            <Link key={cat.id} href={`/game?difficulty=${cat.id}`} className="block h-full">
-              <Card className="card-snap overflow-hidden h-full flex flex-col">
-                <CardContent className="p-0 flex flex-col flex-1">
-                  <div className={`${cat.color} p-6 md:p-12 flex justify-center items-center`}>
-                    <cat.icon className="h-12 w-12 md:h-20 md:w-20 text-white" />
-                  </div>
-                  <div className="p-4 md:p-8 text-center space-y-2 md:space-y-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h4 className="text-xl md:text-3xl font-black">{cat.title}</h4>
-                      <p className="text-sm md:text-lg text-muted-foreground font-bold leading-tight">{cat.text}</p>
-                    </div>
-                    <div className="pt-4 md:pt-6">
-                      <Button className="btn-bouncy w-full h-10 md:h-16 bg-white border-2 md:border-4 border-primary/10 text-primary hover:bg-primary hover:text-white text-base md:text-xl">
-                        <Play className="mr-1.5 md:mr-2 h-4 w-4 md:h-6 md:w-6 fill-current" /> Let's Play!
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        {/* Quick Access Grid */}
+        <section className="pt-8">
+          <h4 className="text-center font-black text-sm uppercase tracking-[0.3em] text-muted-foreground mb-8">Quick Access</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+             <Link href="/game?difficulty=beginner" className="block">
+                <Button variant="outline" className="w-full h-24 rounded-[2rem] border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-lg p-2 group">
+                   <Rocket className="h-6 w-6 text-primary group-hover:scale-125 transition-transform" />
+                   <span className="text-[10px] font-black uppercase text-primary">Practice</span>
+                </Button>
+             </Link>
+             <Link href="/stats" className="block">
+                <Button variant="outline" className="w-full h-24 rounded-[2rem] border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-lg p-2 group">
+                   <Award className="h-6 w-6 text-secondary group-hover:scale-125 transition-transform" />
+                   <span className="text-[10px] font-black uppercase text-secondary">My Stats</span>
+                </Button>
+             </Link>
+             <Link href="/admin" className="block">
+                <Button variant="outline" className="w-full h-24 rounded-[2rem] border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-lg p-2 group">
+                   <BookOpen className="h-6 w-6 text-orange-500 group-hover:scale-125 transition-transform" />
+                   <span className="text-[10px] font-black uppercase text-orange-600">Word Bank</span>
+                </Button>
+             </Link>
+             <Link href="/admin/generator" className="block">
+                <Button variant="outline" className="w-full h-24 rounded-[2rem] border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-lg p-2 group">
+                   <Sparkles className="h-6 w-6 text-yellow-500 group-hover:scale-125 transition-transform" />
+                   <span className="text-[10px] font-black uppercase text-yellow-600">AI Magic</span>
+                </Button>
+             </Link>
+             <Link href="/teacher" className="block">
+                <Button variant="outline" className="w-full h-24 rounded-[2rem] border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-2 transition-all shadow-lg p-2 group">
+                   <Settings className="h-6 w-6 text-accent group-hover:scale-125 transition-transform" />
+                   <span className="text-[10px] font-black uppercase text-accent">Classes</span>
+                </Button>
+             </Link>
+          </div>
         </section>
-
-        <footer className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 pt-4 md:pt-8">
-           <Link href="/join">
-              <Button variant="outline" className="w-full h-20 md:h-28 rounded-2xl md:rounded-[2rem] border-2 md:border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-1 md:gap-2 transition-all shadow-lg group p-2">
-                 <DoorOpen className="h-5 w-5 md:h-8 md:w-8 text-accent group-hover:scale-125 transition-transform" />
-                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-accent text-center">Join Class</span>
-              </Button>
-           </Link>
-           <Link href="/stats">
-              <Button variant="outline" className="w-full h-20 md:h-28 rounded-2xl md:rounded-[2rem] border-2 md:border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-1 md:gap-2 transition-all shadow-lg group p-2">
-                 <Award className="h-5 w-5 md:h-8 md:w-8 text-secondary group-hover:scale-125 transition-transform" />
-                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-secondary text-center">Progress</span>
-              </Button>
-           </Link>
-           <Link href="/teacher">
-              <Button variant="outline" className="w-full h-20 md:h-28 rounded-2xl md:rounded-[2rem] border-2 md:border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-1 md:gap-2 transition-all shadow-lg group p-2">
-                 <Settings className="h-5 w-5 md:h-8 md:w-8 text-primary group-hover:scale-125 transition-transform" />
-                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-primary text-center">Teachers</span>
-              </Button>
-           </Link>
-           <Link href="/admin">
-              <Button variant="outline" className="w-full h-20 md:h-28 rounded-2xl md:rounded-[2rem] border-2 md:border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-1 md:gap-2 transition-all shadow-lg group p-2">
-                 <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-orange-500 group-hover:scale-125 transition-transform" />
-                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-orange-600 text-center">Word Bank</span>
-              </Button>
-           </Link>
-           <Link href="/admin/generator">
-              <Button variant="outline" className="w-full h-20 md:h-28 rounded-2xl md:rounded-[2rem] border-2 md:border-4 border-white bg-white/70 hover:bg-white flex flex-col gap-1 md:gap-2 transition-all shadow-lg group p-2">
-                 <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-yellow-500 group-hover:scale-125 transition-transform" />
-                 <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-yellow-600 text-center">AI Magic</span>
-              </Button>
-           </Link>
-        </footer>
       </main>
     </div>
   );
